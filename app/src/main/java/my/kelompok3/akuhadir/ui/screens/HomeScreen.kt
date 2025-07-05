@@ -20,8 +20,10 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToSessions: () -> Unit,
-    onNavigateToMembers: () -> Unit
+    onNavigateToSessionDetails: () -> Unit,
+    onNavigateToAddSession: () -> Unit,
+    onNavigateToListSessions: () -> Unit,
+    onNavigateToAttendance: () -> Unit,
 ) {
     val primaryColor = Color(0xFF6366F1)
     val greenColor = Color(0xFF10B981)
@@ -200,7 +202,7 @@ fun HomeScreen(
 
                     // Create Session Button
                     Button(
-                        onClick = onNavigateToSessions,
+                        onClick = onNavigateToAddSession,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(40.dp),
@@ -240,7 +242,7 @@ fun HomeScreen(
                 )
 
                 TextButton(
-                    onClick = onNavigateToSessions,
+                    onClick = onNavigateToListSessions,
                     modifier = Modifier.height(32.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
@@ -272,7 +274,8 @@ fun HomeScreen(
                 SessionItemCard(
                     title = title,
                     meeting = meeting,
-                    status = status
+                    status = status,
+                    onNavigateToSessionDetails = onNavigateToSessionDetails
                 )
                 Spacer(modifier = Modifier.height(6.dp))
             }
@@ -280,7 +283,7 @@ fun HomeScreen(
 
         // Floating Action Button - Aku Hadir
         FloatingActionButton(
-            onClick = { /* Navigate to attendance */ },
+            onClick = onNavigateToAttendance,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(16.dp)
@@ -347,9 +350,11 @@ fun StatusItemHorizontal(
 fun SessionItemCard(
     title: String,
     meeting: String,
-    status: Pair<String, Color>
+    status: Pair<String, Color>,
+    onNavigateToSessionDetails: () -> Unit
 ) {
     Card(
+        onClick = onNavigateToSessionDetails,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp)

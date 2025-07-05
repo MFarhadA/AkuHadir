@@ -11,11 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import my.kelompok3.akuhadir.ui.screens.HomeScreen
-import my.kelompok3.akuhadir.ui.screens.LoginScreen
-import my.kelompok3.akuhadir.ui.screens.ProfileScreen
-import my.kelompok3.akuhadir.ui.screens.RegisterScreen
-import my.kelompok3.akuhadir.ui.screens.SplashScreen
+import my.kelompok3.akuhadir.ui.screens.*
 import my.kelompok3.akuhadir.ui.theme.AkuHadirTheme
 
 class MainActivity : ComponentActivity() {
@@ -66,27 +62,34 @@ fun AkuHadirApp() {
         }
         composable("home") {
             HomeScreen(
-                onNavigateToSessions = { navController.navigate("sessions") },
-                onNavigateToMembers = { navController.navigate("members") }
+                onNavigateToSessionDetails = { navController.navigate("session_details") },
+                onNavigateToAddSession = { navController.navigate("add_session") },
+                onNavigateToListSessions = { navController.navigate("list_sessions") },
+                onNavigateToAttendance = { navController.navigate("attendance") },
             )
         }
-        /*
-        composable("sessions") {
-            SessionsScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToAddSession = { navController.navigate("add_session") }
-            )
-        }
-        composable("members") {
-            MembersScreen(
+        composable("session_details") {
+            SessionDetailsScreen (
                 onNavigateBack = { navController.popBackStack() }
             )
         }
         composable("add_session") {
             AddSessionScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onCreateSession = { navController.popBackStack() }
             )
         }
-        */
+        composable("list_sessions") {
+            ListSessionScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSessionDetails = { navController.navigate("session_details") }
+            )
+        }
+        composable("attendance") {
+            AttendanceScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onSubmitAttendance = { navController.popBackStack() }
+            )
+        }
     }
 }
