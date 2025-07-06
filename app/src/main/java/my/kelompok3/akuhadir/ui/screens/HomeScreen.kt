@@ -52,7 +52,7 @@ fun HomeScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 10.dp, end = 10.dp)
+                .padding(horizontal = 10.dp)
                 .height(110.dp)
                 .background(
                     color = Color(0xFF6B7DDC),
@@ -220,7 +220,7 @@ fun HomeScreen(
                         Text(
                             text = "Tidak ada sesi tersedia",
                             fontSize = 14.sp,
-                            color = Black,
+                            color = Color.Gray,
                             fontWeight = FontWeight.SemiBold,
                             textAlign = TextAlign.Center,
                             maxLines = 2,

@@ -2,65 +2,61 @@ package my.kelompok3.akuhadir.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.ArrowCircleLeft
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import my.kelompok3.akuhadir.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-
 fun AddSessionScreen(
     onNavigateBack: () -> Unit,
     onCreateSession: () -> Unit
 ) {
-    val primaryColor = Color(0xFF6366F1)
-    val greenColor = Color(0xFF10B981)
-    val redColor = Color(0xFFEF4444)
-    val backgroundColor = Color(0xFFF3F4F6)
 
     var selectedCategory by remember { mutableStateOf("Hardware") }
-    var subjectName by remember { mutableStateOf("") }
-    var meetingNumber by remember { mutableStateOf("") }
-    var meetingTime by remember { mutableStateOf("") }
-    var meetingLink by remember { mutableStateOf("") }
+    var subjectName by remember { mutableStateOf("Pembelajaran UI/UX") }
+    var meetingNumber by remember { mutableStateOf("9") }
+    var meetingTime by remember { mutableStateOf("17:30") }
+    var meetingLink by remember { mutableStateOf("meet.google.com/etr-rtr-qrq") }
+    var meetingLocation by remember { mutableStateOf("Ruang Lab Komputer") }
     var selectedMode by remember { mutableStateOf("Offline") }
+    var showDropdown by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(BackgroundColor)
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
             // Header
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = primaryColor),
-                shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .padding(horizontal = 10.dp)
+                    .background(
+                        color = PrimaryColor,
+                        shape = RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp)
+                    ),
+                contentAlignment = Alignment.Center
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(16.dp)
+                        .padding(top = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
@@ -68,8 +64,9 @@ fun AddSessionScreen(
                         modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.Default.ArrowCircleLeft,
                             contentDescription = "Back",
+                            modifier = Modifier.size(30.dp),
                             tint = Color.White
                         )
                     }
@@ -78,7 +75,7 @@ fun AddSessionScreen(
                         text = "Tambah Sesi",
                         color = Color.White,
                         fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
@@ -88,116 +85,243 @@ fun AddSessionScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp)
+                    .padding(horizontal = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Category Selection
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    CategoryChip(
-                        text = "Hardware",
-                        isSelected = selectedCategory == "Hardware",
-                        onClick = { selectedCategory = "Hardware" },
-                        modifier = Modifier.weight(1f)
+                // Nama Materi
+                Column {
+                    Text(
+                        text = "Nama Materi",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Black,
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
-                    CategoryChip(
-                        text = "Software",
-                        isSelected = selectedCategory == "Software",
-                        onClick = { selectedCategory = "Software" },
-                        modifier = Modifier.weight(1f)
-                    )
-                    CategoryChip(
-                        text = "Game",
-                        isSelected = selectedCategory == "Game",
-                        onClick = { selectedCategory = "Game" },
-                        color = redColor,
-                        modifier = Modifier.weight(1f)
+                    OutlinedTextField(
+                        value = subjectName,
+                        onValueChange = { subjectName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(15.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedBorderColor = PrimaryColor,
+                            unfocusedBorderColor = Gray
+                        )
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                // Pertemuan ke- dan Waktu Masuk
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Pertemuan ke-
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Pertemuan ke-",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Black,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        OutlinedTextField(
+                            value = meetingNumber,
+                            onValueChange = { meetingNumber = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(15.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                focusedBorderColor = PrimaryColor,
+                                unfocusedBorderColor = Gray
+                            )
+                        )
+                    }
 
-                // Subject Name
-                InputField(
-                    label = "Nama Materi",
-                    value = subjectName,
-                    onValueChange = { subjectName = it },
-                    placeholder = "Pembelajaran UI/UX"
+                    // Waktu Masuk
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Waktu Masuk",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Black,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        OutlinedTextField(
+                            value = meetingTime,
+                            onValueChange = { meetingTime = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(15.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                focusedBorderColor = PrimaryColor,
+                                unfocusedBorderColor = Gray
+                            ),
+                            trailingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.AccessTime,
+                                    contentDescription = "Time",
+                                    tint = Color.Gray
+                                )
+                            }
+                        )
+                    }
+                }
+
+                // Divisi
+                Column {
+                    Text(
+                        text = "Divisi",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Black,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    ExposedDropdownMenuBox(
+                        expanded = showDropdown,
+                        onExpandedChange = { showDropdown = !showDropdown }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedCategory,
+                            onValueChange = {},
+                            readOnly = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(),
+                            shape = RoundedCornerShape(15.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                focusedBorderColor = PrimaryColor,
+                                unfocusedBorderColor = Gray
+                            ),
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(
+                                    expanded = showDropdown
+                                )
+                            }
+                        )
+                        ExposedDropdownMenu(
+                            expanded = showDropdown,
+                            onDismissRequest = { showDropdown = false }
+                        ) {
+                            listOf("Hardware", "Software", "Game", "Pengurus").forEach { category ->
+                                DropdownMenuItem(
+                                    text = { Text(category) },
+                                    onClick = {
+                                        selectedCategory = category
+                                        showDropdown = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(5.dp)
+                        .background(Color.White, shape = RoundedCornerShape(100.dp))
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Meeting Number
-                InputField(
-                    label = "Pertemuan ke-",
-                    value = meetingNumber,
-                    onValueChange = { meetingNumber = it },
-                    placeholder = "9"
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Meeting Time
-                InputField(
-                    label = "Waktu Masuk",
-                    value = meetingTime,
-                    onValueChange = { meetingTime = it },
-                    placeholder = "17:30",
-                    trailingIcon = Icons.Default.AccessTime
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
 
                 // Mode Selection
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    ModeChip(
+                    ModeChipSession(
                         text = "Offline",
                         isSelected = selectedMode == "Offline",
                         onClick = { selectedMode = "Offline" },
+                        primaryColor = my.kelompok3.akuhadir.ui.theme.PrimaryColor,
                         modifier = Modifier.weight(1f)
                     )
-                    ModeChip(
+                    ModeChipSession(
                         text = "Online",
                         isSelected = selectedMode == "Online",
                         onClick = { selectedMode = "Online" },
-                        color = primaryColor,
+                        primaryColor = my.kelompok3.akuhadir.ui.theme.PrimaryColor,
                         modifier = Modifier.weight(1f)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                // Link meet / Lokasi meet (berubah berdasarkan mode)
+                Column {
+                    Text(
+                        text = if (selectedMode == "Online") "Link meet" else "Lokasi meet",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Black,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    OutlinedTextField(
+                        value = if (selectedMode == "Online") meetingLink else meetingLocation,
+                        onValueChange = {
+                            if (selectedMode == "Online") {
+                                meetingLink = it
+                            } else {
+                                meetingLocation = it
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(15.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedBorderColor = PrimaryColor,
+                            unfocusedBorderColor = Gray
+                        )
+                    )
+                }
 
-                // Meeting Link
-                InputField(
-                    label = "Link meet",
-                    value = meetingLink,
-                    onValueChange = { meetingLink = it },
-                    placeholder = "meet.google.com/eqr-rtrr-qrq",
-                    trailingIcon = Icons.Default.Link
-                )
+                Spacer(modifier = Modifier.height(3.dp))
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Create Session Button
+                // Buka Sesi Button
                 Button(
                     onClick = onCreateSession,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = greenColor),
-                    shape = RoundedCornerShape(12.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = GreenColor),
+                    shape = RoundedCornerShape(15.dp)
                 ) {
                     Text(
                         text = "Buka Sesi",
                         color = Color.White,
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ModeChipSession(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    primaryColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(40.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isSelected) primaryColor else Color.White,
+            contentColor = if (isSelected) Color.White else primaryColor
+        ),
+        shape = RoundedCornerShape(15.dp),
+        border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, primaryColor) else null
+    ) {
+        Text(
+            text = text,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }

@@ -53,7 +53,7 @@ fun AttendanceBottomSheet(
             Text(
                 text = "Submit Kehadiran",
                 fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = Black
             )
 

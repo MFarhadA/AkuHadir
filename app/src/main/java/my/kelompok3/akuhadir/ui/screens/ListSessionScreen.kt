@@ -7,23 +7,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ArrowCircleLeft
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import my.kelompok3.akuhadir.data.model.SessionItem
+import my.kelompok3.akuhadir.ui.theme.*
 
 // ListSessionScreen
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,48 +27,50 @@ fun ListSessionScreen(
     onNavigateBack: () -> Unit,
     onNavigateToSessionDetails: (String) -> Unit
 ) {
-    val primaryColor = Color(0xFF6366F1)
-    val greenColor = Color(0xFF10B981)
-    val redColor = Color(0xFFEF4444)
-    val grayColor = Color(0xFF9CA3AF)
-    val backgroundColor = Color(0xFFF3F4F6)
 
     val sessions = listOf(
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Izin", primaryColor),
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Alpha", redColor),
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Izin", primaryColor),
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Izin", primaryColor),
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Izin", primaryColor),
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Izin", primaryColor),
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
-        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor)
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", GreenColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Izin", PrimaryColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Alpha", RedColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Izin", PrimaryColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Izin", PrimaryColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", GreenColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", GreenColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", GreenColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", GreenColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Izin", PrimaryColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Izin", PrimaryColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", GreenColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", GreenColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", GreenColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", GreenColor)
     )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(BackgroundColor)
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
             // Header
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = primaryColor),
-                shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .padding(horizontal = 10.dp)
+                    .background(
+                        color = PrimaryColor,
+                        shape = RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp)
+                    ),
+                contentAlignment = Alignment.Center
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(16.dp)
+                        .padding(top = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
@@ -81,8 +78,9 @@ fun ListSessionScreen(
                         modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.Default.ArrowCircleLeft,
                             contentDescription = "Back",
+                            modifier = Modifier.size(30.dp),
                             tint = Color.White
                         )
                     }
@@ -91,16 +89,16 @@ fun ListSessionScreen(
                         text = "List Sesi",
                         color = Color.White,
                         fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
 
-            // Session List
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .padding(16.dp)
+                    .padding(horizontal = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(sessions) { session ->
@@ -123,12 +121,12 @@ fun SessionListItem(
         onClick = onNavigateToSessionDetails,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(15.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -137,36 +135,39 @@ fun SessionListItem(
             ) {
                 Box(
                     modifier = Modifier
-                        .width(4.dp)
-                        .height(40.dp)
-                        .background(Color.Red, RoundedCornerShape(2.dp))
+                        .width(10.dp)
+                        .height(32.dp)
+                        .background(RedColor, RoundedCornerShape(15.dp))
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(10.dp))
                 Column {
                     Text(
                         text = session.title,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.Black
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.Black,
+                        lineHeight = 16.sp
                     )
                     Text(
                         text = session.meeting,
-                        fontSize = 12.sp,
-                        color = Color.Gray
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Gray,
+                        lineHeight = 14.sp
                     )
                 }
             }
 
             Box(
                 modifier = Modifier
-                    .background(session.statusColor, RoundedCornerShape(16.dp))
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .background(session.statusColor, RoundedCornerShape(100))
+                    .padding(horizontal = 10.dp, vertical = 2.dp)
             ) {
                 Text(
                     text = session.status,
                     color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }

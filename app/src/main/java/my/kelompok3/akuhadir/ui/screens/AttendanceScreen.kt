@@ -210,7 +210,7 @@ fun AttendanceScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = "Buka Sesi",
+                        text = "Submit Kehadiran",
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium
