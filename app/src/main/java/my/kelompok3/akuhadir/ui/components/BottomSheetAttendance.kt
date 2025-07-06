@@ -196,7 +196,7 @@ fun AttendanceBottomSheet(
                 shape = RoundedCornerShape(15.dp)
             ) {
                 Text(
-                    text = "Buka Sesi",
+                    text = "Submit Kehadiran",
                     color = Color.White,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
