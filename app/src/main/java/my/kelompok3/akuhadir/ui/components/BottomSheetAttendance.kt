@@ -62,7 +62,8 @@ fun AttendanceBottomSheet(
             // Photo Upload Area
             Card(
                 modifier = Modifier
-                    .size(200.dp),
+                    .fillMaxWidth()
+                    .height(200.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -77,12 +78,13 @@ fun AttendanceBottomSheet(
                             imageVector = Icons.Default.CameraAlt,
                             contentDescription = null,
                             modifier = Modifier.size(60.dp),
-                            tint = Color.Gray
+                            tint = PrimaryColor
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Foto Bukti Kehadiran",
-                            color = Color.Gray,
+                            fontWeight = FontWeight.SemiBold,
+                            color = PrimaryColor,
                             fontSize = 14.sp
                         )
                     }
@@ -102,7 +104,7 @@ fun AttendanceBottomSheet(
                         .weight(1f)
                         .height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(15.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.CloudUpload,
@@ -113,6 +115,7 @@ fun AttendanceBottomSheet(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Upload Foto",
+                        fontWeight = FontWeight.SemiBold,
                         color = PrimaryColor,
                         fontSize = 14.sp
                     )
@@ -124,7 +127,7 @@ fun AttendanceBottomSheet(
                         .weight(1f)
                         .height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(15.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.CameraAlt,
@@ -135,13 +138,23 @@ fun AttendanceBottomSheet(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Ambil Foto",
+                        fontWeight = FontWeight.SemiBold,
                         color = Color.White,
                         fontSize = 14.sp
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(5.dp)
+                    .background(Color.White, shape = RoundedCornerShape(100.dp))
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Status Selection
             Row(
@@ -180,13 +193,13 @@ fun AttendanceBottomSheet(
                     .fillMaxWidth()
                     .height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = GreenColor),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(15.dp)
             ) {
                 Text(
                     text = "Buka Sesi",
                     color = Color.White,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.SemiBold
                 )
             }
 
@@ -211,12 +224,12 @@ fun StatusChip(
             containerColor = if (isSelected) color else Color.White,
             contentColor = if (isSelected) Color.White else color
         ),
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(15.dp)
     ) {
         Text(
             text = text,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold
         )
     }
 }

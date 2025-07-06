@@ -47,6 +47,12 @@ fun ListSessionScreen(
         SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
         SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
         SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Izin", primaryColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Izin", primaryColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
+        SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor),
         SessionItem("Pembelajaran UI/UX", "Pertemuan 15", "Hadir", greenColor)
     )
 

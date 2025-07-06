@@ -1,23 +1,30 @@
 package my.kelompok3.akuhadir.ui.screens
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import my.kelompok3.akuhadir.data.model.StatusData
 import my.kelompok3.akuhadir.ui.theme.*
 import my.kelompok3.akuhadir.ui.components.AttendanceBottomSheet
 
@@ -46,7 +53,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 10.dp, end = 10.dp)
-                .height(130.dp)
+                .height(110.dp)
                 .background(
                     color = Color(0xFF6B7DDC),
                     shape = RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp)
@@ -65,13 +72,14 @@ fun HomeScreen(
 
             // Welcome Message Card
             Text(
+                modifier = Modifier.padding(start = 2.dp),
                 text = "Selamat Datang!",
                 color = Color.White,
                 fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.SemiBold
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(5.dp))
 
             // Profile Card
             Card(
@@ -86,84 +94,69 @@ fun HomeScreen(
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .background(Color(0xFFE5E7EB), CircleShape),
+                            .background(Color(0xFFC4C4C4), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = null,
-                            tint = Color.Gray,
-                            modifier = Modifier.size(20.dp)
+                            tint = Color.White,
+                            modifier = Modifier.size(25.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
                             text = "Muhammad Farhad Ajilla",
-                            color = Color.Black,
+                            color = Black,
                             fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.SemiBold,
+                            lineHeight = 18.sp
                         )
                         Text(
                             text = "2355201063",
-                            color = Color.Gray,
-                            fontSize = 12.sp
+                            color = Black,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            lineHeight = 15.sp
                         )
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Stats Cards Row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Total Sesi Card
+                // Pie Chart Card
                 Card(
                     modifier = Modifier
-                        .fillMaxHeight()
-                        .weight(1f),
+                        .weight(1f)
+                        .fillMaxHeight(), // Tambahkan fillMaxHeight
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Column(
+                    Box(
                         modifier = Modifier.padding(12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "Total Sesi",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.Black
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .fillMaxHeight()
-                                .height(50.dp)
-                                .background(GreenColor, RoundedCornerShape(8.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "19",
-                                fontSize = 30.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
+                        PieChartWithCenter(
+                            data = listOf(
+                                StatusData("Hadir", 13, GreenColor),
+                                StatusData("Izin", 2, PrimaryColor),
+                                StatusData("Sakit", 2, RedColor),
+                                StatusData("Alpha", 1, GrayColor)
                             )
-                        }
+                        )
                     }
                 }
 
                 // Status Items Card
                 Card(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(), // Tambahkan fillMaxHeight
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -193,6 +186,14 @@ fun HomeScreen(
                         )
                     }
                 }
+
+                // Box untuk mengisi ruang kosong
+                Box(
+                    modifier = Modifier
+                        .weight(0.4f)
+                        .fillMaxHeight() // Tambahkan fillMaxHeight
+                        .background(PrimaryColor, RoundedCornerShape(15.dp))
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -219,8 +220,8 @@ fun HomeScreen(
                         Text(
                             text = "Tidak ada sesi tersedia",
                             fontSize = 14.sp,
-                            color = Color.Gray,
-                            fontWeight = FontWeight.Medium,
+                            color = Black,
+                            fontWeight = FontWeight.SemiBold,
                             textAlign = TextAlign.Center,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
@@ -239,17 +240,17 @@ fun HomeScreen(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Add,
+                            imageVector = Icons.Default.AddCircle,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Buka Sesi Pertemuan",
                             color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
@@ -266,7 +267,7 @@ fun HomeScreen(
                 Text(
                     text = "List Sesi",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = Color.Black
                 )
 
@@ -278,8 +279,10 @@ fun HomeScreen(
                     Text(
                         text = "Lihat semua",
                         color = PrimaryColor,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
+                    Spacer(modifier = Modifier.width(5.dp))
                     Icon(
                         imageVector = Icons.Default.ArrowForward,
                         contentDescription = null,
@@ -296,7 +299,7 @@ fun HomeScreen(
                 Triple("Pembelajaran UI/UX", "Pertemuan 15", "Hadir" to GreenColor),
                 Triple("Pembelajaran UI/UX", "Pertemuan 15", "Izin" to PrimaryColor),
                 Triple("Pembelajaran UI/UX", "Pertemuan 15", "Sakit" to RedColor),
-                Triple("Pembelajaran UI/UX", "Pertemuan 16", "alpha" to GrayColor)
+                Triple("Pembelajaran UI/UX", "Pertemuan 16", "Alpha" to GrayColor)
             )
 
             sessions.forEach { (title, meeting, status) ->
@@ -304,7 +307,7 @@ fun HomeScreen(
                     title = title,
                     meeting = meeting,
                     status = status,
-                    onNavigateToSessionDetails = onNavigateToSessionDetails
+                    onNavigateToSessionDetails = onNavigateToSessionDetails,
                 )
                 Spacer(modifier = Modifier.height(6.dp))
             }
@@ -318,28 +321,29 @@ fun HomeScreen(
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(16.dp)
-                .width(200.dp)
-                .height(56.dp),
+                .padding(vertical = 25.dp, horizontal = 30.dp)
+                .fillMaxWidth()
+                .height(60.dp),
             containerColor = PrimaryColor,
-            shape = RoundedCornerShape(28.dp)
+            shape = RoundedCornerShape(15.dp)
         ) {
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Fingerprint icon placeholder
-                Text(
-                    text = "👆",
-                    fontSize = 20.sp,
-                    color = Color.White
+                Icon(
+                    imageVector = Icons.Filled.Fingerprint,
+                    contentDescription = "Point up",
+                    tint = Color.White,
+                    modifier = Modifier.size(30.dp)
                 )
+
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Aku Hadir",
                     color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Medium
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }
@@ -366,7 +370,7 @@ fun HomeScreen(
     }
 }
 
-// Fungsi-fungsi pendukung tetap sama
+
 @Composable
 fun StatusItemHorizontal(
     color: Color,
@@ -375,18 +379,18 @@ fun StatusItemHorizontal(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(20.dp)
+                .size(25.dp)
                 .background(color, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = count,
                 color = Color.White,
-                fontSize = 10.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -394,8 +398,72 @@ fun StatusItemHorizontal(
             text = label,
             fontSize = 12.sp,
             color = Color.Black,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.SemiBold
         )
+    }
+}
+
+@Composable
+fun PieChartWithCenter(
+    data: List<StatusData>,
+    modifier: Modifier = Modifier,
+    chartSize: Dp = 120.dp,
+    strokeWidth: Dp = 15.dp
+) {
+    val total = data.sumOf { it.count }
+
+    Box(
+        modifier = modifier.size(chartSize),
+        contentAlignment = Alignment.Center
+    ) {
+        // Pie Chart
+        Canvas(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            val center = Offset(size.width / 2, size.height / 2)
+            val radius = size.minDimension / 2 - strokeWidth.toPx() / 2
+
+            var currentAngle = -90f
+
+            data.forEach { item ->
+                val sweepAngle = (item.count.toFloat() / total) * 360f
+
+                drawArc(
+                    color = item.color,
+                    startAngle = currentAngle,
+                    sweepAngle = sweepAngle,
+                    useCenter = false,
+                    style = Stroke(strokeWidth.toPx()),
+                    topLeft = Offset(
+                        center.x - radius,
+                        center.y - radius
+                    ),
+                    size = Size(radius * 2, radius * 2)
+                )
+
+                currentAngle += sweepAngle
+            }
+        }
+
+        // Center Text
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = total.toString(),
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold,
+                color = GreenColor,
+                lineHeight = 1.sp
+            )
+            Text(
+                text = "Sesi",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Black,
+                lineHeight = 1.sp
+            )
+        }
     }
 }
 
@@ -410,12 +478,12 @@ fun SessionItemCard(
         onClick = onNavigateToSessionDetails,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(15.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -424,36 +492,39 @@ fun SessionItemCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .width(4.dp)
+                        .width(10.dp)
                         .height(32.dp)
-                        .background(Color.Red, RoundedCornerShape(2.dp))
+                        .background(RedColor, RoundedCornerShape(15.dp))
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
                     Text(
                         text = title,
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.Black
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.Black,
+                        lineHeight = 16.sp
                     )
                     Text(
                         text = meeting,
                         fontSize = 11.sp,
-                        color = Color.Gray
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Gray,
+                        lineHeight = 14.sp
                     )
                 }
             }
 
             Box(
                 modifier = Modifier
-                    .background(status.second, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                    .background(status.second, RoundedCornerShape(100))
+                    .padding(horizontal = 10.dp, vertical = 2.dp)
             ) {
                 Text(
                     text = status.first,
                     color = Color.White,
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }
