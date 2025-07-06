@@ -9,13 +9,17 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import my.kelompok3.akuhadir.ui.theme.*
+import my.kelompok3.akuhadir.ui.components.AttendanceBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,79 +29,86 @@ fun HomeScreen(
     onNavigateToListSessions: () -> Unit,
     onNavigateToAttendance: () -> Unit,
 ) {
-    val primaryColor = Color(0xFF6366F1)
-    val greenColor = Color(0xFF10B981)
-    val redColor = Color(0xFFEF4444)
-    val grayColor = Color(0xFF9CA3AF)
-    val backgroundColor = Color(0xFFF3F4F6)
 
+    // State untuk mengontrol visibility BottomSheet
+    var showAttendanceBottomSheet by remember { mutableStateOf(false) }
+
+    // Buat SheetState dengan expanded = true agar bottomsheet terbuka penuh
+    val bottomSheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true // Ini akan membuat bottomsheet langsung terbuka penuh
+    )
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(BackgroundColor)
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 10.dp, end = 10.dp)
+                .height(130.dp)
+                .background(
+                    color = Color(0xFF6B7DDC),
+                    shape = RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp)
+                )
+                .align(Alignment.TopCenter)
+        )
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
+                .padding(horizontal = 14.dp)
                 .padding(bottom = 80.dp) // Add bottom padding for FAB
         ) {
+
+            Spacer(modifier = Modifier.height(25.dp))
+
             // Welcome Message Card
+            Text(
+                text = "Selamat Datang!",
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Profile Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = primaryColor),
-                shape = RoundedCornerShape(16.dp)
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Selamat Datang!",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Profile Card
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(12.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color(0xFFE5E7EB), CircleShape),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .background(Color(0xFFE5E7EB), CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = null,
-                                    tint = Color.Gray,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = "Muhammad Farhad Ajilla",
-                                    color = Color.Black,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = "2355201063",
-                                    color = Color.Gray,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Muhammad Farhad Ajilla",
+                            color = Color.Black,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "2355201063",
+                            color = Color.Gray,
+                            fontSize = 12.sp
+                        )
                     }
                 }
             }
@@ -106,12 +117,16 @@ fun HomeScreen(
 
             // Stats Cards Row
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Total Sesi Card
                 Card(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(1f),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -131,13 +146,14 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .fillMaxHeight()
                                 .height(50.dp)
-                                .background(greenColor, RoundedCornerShape(8.dp)),
+                                .background(GreenColor, RoundedCornerShape(8.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = "19",
-                                fontSize = 24.sp,
+                                fontSize = 30.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
@@ -156,22 +172,22 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         StatusItemHorizontal(
-                            color = greenColor,
+                            color = GreenColor,
                             count = "13",
                             label = "Hadir"
                         )
                         StatusItemHorizontal(
-                            color = primaryColor,
+                            color = PrimaryColor,
                             count = "2",
                             label = "Izin"
                         )
                         StatusItemHorizontal(
-                            color = redColor,
+                            color = RedColor,
                             count = "2",
                             label = "Sakit"
                         )
                         StatusItemHorizontal(
-                            color = grayColor,
+                            color = GrayColor,
                             count = "1",
                             label = "Alpha"
                         )
@@ -183,20 +199,33 @@ fun HomeScreen(
 
             // No Session Available Card
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier
+                        .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "Tidak ada sesi tersedia",
-                        fontSize = 14.sp,
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f), // agar Box mengisi ruang vertikal
+                        contentAlignment = Alignment.Center // teks di tengah vertikal & horizontal
+                    ) {
+                        Text(
+                            text = "Tidak ada sesi tersedia",
+                            fontSize = 14.sp,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -206,7 +235,7 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(40.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = greenColor),
+                        colors = ButtonDefaults.buttonColors(containerColor = GreenColor),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Icon(
@@ -248,13 +277,13 @@ fun HomeScreen(
                 ) {
                     Text(
                         text = "Lihat semua",
-                        color = primaryColor,
+                        color = PrimaryColor,
                         fontSize = 12.sp
                     )
                     Icon(
                         imageVector = Icons.Default.ArrowForward,
                         contentDescription = null,
-                        tint = primaryColor,
+                        tint = PrimaryColor,
                         modifier = Modifier.size(14.dp)
                     )
                 }
@@ -264,10 +293,10 @@ fun HomeScreen(
 
             // Session List - Only 3 items
             val sessions = listOf(
-                Triple("Pembelajaran UI/UX", "Pertemuan 15", "Hadir" to greenColor),
-                Triple("Pembelajaran UI/UX", "Pertemuan 15", "Izin" to primaryColor),
-                Triple("Pembelajaran UI/UX", "Pertemuan 15", "Sakit" to redColor),
-                Triple("Pembelajaran UI/UX", "Pertemuan 16", "alpha" to grayColor)
+                Triple("Pembelajaran UI/UX", "Pertemuan 15", "Hadir" to GreenColor),
+                Triple("Pembelajaran UI/UX", "Pertemuan 15", "Izin" to PrimaryColor),
+                Triple("Pembelajaran UI/UX", "Pertemuan 15", "Sakit" to RedColor),
+                Triple("Pembelajaran UI/UX", "Pertemuan 16", "alpha" to GrayColor)
             )
 
             sessions.forEach { (title, meeting, status) ->
@@ -283,13 +312,16 @@ fun HomeScreen(
 
         // Floating Action Button - Aku Hadir
         FloatingActionButton(
-            onClick = onNavigateToAttendance,
+            onClick = {
+                // Tampilkan BottomSheet ketika tombol "Aku Hadir" ditekan
+                showAttendanceBottomSheet = true
+            },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(16.dp)
                 .width(200.dp)
                 .height(56.dp),
-            containerColor = primaryColor,
+            containerColor = PrimaryColor,
             shape = RoundedCornerShape(28.dp)
         ) {
             Row(
@@ -311,9 +343,30 @@ fun HomeScreen(
                 )
             }
         }
+
+        // Tampilkan BottomSheet jika showAttendanceBottomSheet = true
+        if (showAttendanceBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showAttendanceBottomSheet = false },
+                sheetState = bottomSheetState,
+                containerColor = Color.Transparent,
+                contentColor = Color.Transparent,
+                dragHandle = null // Hapus handle drag default
+            ) {
+                AttendanceBottomSheet(
+                    onDismiss = { showAttendanceBottomSheet = false },
+                    onSubmitAttendance = {
+                        // Lakukan aksi submit kehadiran
+                        onNavigateToAttendance() // Opsional: navigasi ke halaman kehadiran setelah submit
+                        showAttendanceBottomSheet = false
+                    }
+                )
+            }
+        }
     }
 }
 
+// Fungsi-fungsi pendukung tetap sama
 @Composable
 fun StatusItemHorizontal(
     color: Color,
