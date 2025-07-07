@@ -94,7 +94,7 @@ fun HomeScreen(
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .background(Color(0xFFC4C4C4), CircleShape),
+                            .background(BackgroundColor, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
