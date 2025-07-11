@@ -1,5 +1,6 @@
 package my.kelompok3.akuhadir
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -8,15 +9,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import my.kelompok3.akuhadir.ui.screens.*
 import my.kelompok3.akuhadir.ui.theme.AkuHadirTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             AkuHadirTheme {
                 Surface(
@@ -62,17 +66,17 @@ fun AkuHadirApp() {
         }
         composable("home") {
             HomeScreen(
-                onNavigateToSessionDetails = { navController.navigate("session_details") },
+                onNavigateToSessionDetails = { title, meeting ->
+                    val encodedTitle = Uri.encode(title)
+                    val encodedMeeting = Uri.encode(meeting)
+                    navController.navigate("sessionDetails/$encodedTitle/$encodedMeeting")
+                },
                 onNavigateToAddSession = { navController.navigate("add_session") },
                 onNavigateToListSessions = { navController.navigate("list_sessions") },
                 onNavigateToAttendance = { navController.navigate("attendance") },
             )
         }
-        composable("session_details") {
-            SessionDetailsScreen (
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
+        // Removed the duplicate "session_details" composable
         composable("add_session") {
             AddSessionScreen(
                 onNavigateBack = { navController.popBackStack() },
@@ -82,13 +86,32 @@ fun AkuHadirApp() {
         composable("list_sessions") {
             ListSessionScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToSessionDetails = { navController.navigate("session_details") }
+                onNavigateToSessionDetails = { title, meeting ->
+                    val encodedTitle = Uri.encode(title)
+                    val encodedMeeting = Uri.encode(meeting)
+                    navController.navigate("sessionDetails/$encodedTitle/$encodedMeeting")
+                }
             )
         }
         composable("attendance") {
             AttendanceScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onSubmitAttendance = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = "sessionDetails/{title}/{meeting}",
+            arguments = listOf(
+                navArgument("title") { type = NavType.StringType },
+                navArgument("meeting") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val title = backStackEntry.arguments?.getString("title") ?: ""
+            val meeting = backStackEntry.arguments?.getString("meeting") ?: ""
+            SessionDetailsScreen(
+                title = title,
+                meeting = meeting,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

@@ -25,7 +25,7 @@ import my.kelompok3.akuhadir.ui.theme.*
 @Composable
 fun ListSessionScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToSessionDetails: (String) -> Unit
+    onNavigateToSessionDetails: (String, String) -> Unit
 ) {
 
     val sessions = listOf(
@@ -104,7 +104,9 @@ fun ListSessionScreen(
                 items(sessions) { session ->
                     SessionListItem(
                         session = session,
-                        onNavigateToSessionDetails = { onNavigateToSessionDetails(session.title) }
+                        onNavigateToSessionDetails = { title, meeting ->
+                            onNavigateToSessionDetails(title, meeting)
+                        }
                     )
                 }
             }
@@ -115,10 +117,10 @@ fun ListSessionScreen(
 @Composable
 fun SessionListItem(
     session: SessionItem,
-    onNavigateToSessionDetails: () -> Unit
+    onNavigateToSessionDetails: (String, String) -> Unit
 ) {
     Card(
-        onClick = onNavigateToSessionDetails,
+        onClick = { onNavigateToSessionDetails(session.title, session.meeting) },
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(15.dp)

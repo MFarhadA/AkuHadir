@@ -27,7 +27,7 @@ fun ProfileScreen(
     var selectedDivision by remember { mutableStateOf("Hardware") }
     var expanded by remember { mutableStateOf(false) }
 
-    val divisions = listOf("Hardware", "Software", "Game", "Pengurus")
+    val divisions = listOf("Hardware", "Software", "Game")
 
     Box(
         modifier = Modifier

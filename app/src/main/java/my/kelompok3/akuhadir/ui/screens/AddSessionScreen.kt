@@ -1,6 +1,10 @@
 package my.kelompok3.akuhadir.ui.screens
 
+import android.app.TimePickerDialog
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -11,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,6 +36,23 @@ fun AddSessionScreen(
     var meetingLocation by remember { mutableStateOf("Ruang Lab Komputer") }
     var selectedMode by remember { mutableStateOf("Offline") }
     var showDropdown by remember { mutableStateOf(false) }
+
+    // Waktu Masuk
+    val context = LocalContext.current
+    val calendar = java.util.Calendar.getInstance()
+
+    val timePickerDialog = remember {
+        TimePickerDialog(
+            context,
+            { _, hour: Int, minute: Int ->
+                val formattedTime = String.format("%02d:%02d", hour, minute)
+                meetingTime = formattedTime
+            },
+            calendar.get(java.util.Calendar.HOUR_OF_DAY),
+            calendar.get(java.util.Calendar.MINUTE),
+            true // true = 24 jam format, false = AM/PM
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -106,7 +128,9 @@ fun AddSessionScreen(
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White,
                             focusedBorderColor = PrimaryColor,
-                            unfocusedBorderColor = Gray
+                            unfocusedBorderColor = Gray,
+                            focusedTextColor = Black,
+                            unfocusedTextColor = Black
                         )
                     )
                 }
@@ -134,12 +158,13 @@ fun AddSessionScreen(
                                 focusedContainerColor = Color.White,
                                 unfocusedContainerColor = Color.White,
                                 focusedBorderColor = PrimaryColor,
-                                unfocusedBorderColor = Gray
+                                unfocusedBorderColor = Gray,
+                                focusedTextColor = Black,
+                                unfocusedTextColor = Black
                             )
                         )
                     }
 
-                    // Waktu Masuk
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Waktu Masuk",
@@ -150,14 +175,28 @@ fun AddSessionScreen(
                         )
                         OutlinedTextField(
                             value = meetingTime,
-                            onValueChange = { meetingTime = it },
+                            onValueChange = {},
                             modifier = Modifier.fillMaxWidth(),
+                            readOnly = true,
+                            enabled = true,
+                            interactionSource = remember { MutableInteractionSource() }
+                                .also { interactionSource ->
+                                    LaunchedEffect(interactionSource) {
+                                        interactionSource.interactions.collect {
+                                            if (it is PressInteraction.Release) {
+                                                timePickerDialog.show()
+                                            }
+                                        }
+                                    }
+                                },
                             shape = RoundedCornerShape(15.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = Color.White,
                                 unfocusedContainerColor = Color.White,
                                 focusedBorderColor = PrimaryColor,
-                                unfocusedBorderColor = Gray
+                                unfocusedBorderColor = Gray,
+                                focusedTextColor = Black,
+                                unfocusedTextColor = Black
                             ),
                             trailingIcon = {
                                 Icon(
@@ -195,7 +234,9 @@ fun AddSessionScreen(
                                 focusedContainerColor = Color.White,
                                 unfocusedContainerColor = Color.White,
                                 focusedBorderColor = PrimaryColor,
-                                unfocusedBorderColor = Gray
+                                unfocusedBorderColor = Gray,
+                                focusedTextColor = Black,
+                                unfocusedTextColor = Black
                             ),
                             trailingIcon = {
                                 ExposedDropdownMenuDefaults.TrailingIcon(
@@ -207,9 +248,14 @@ fun AddSessionScreen(
                             expanded = showDropdown,
                             onDismissRequest = { showDropdown = false }
                         ) {
-                            listOf("Hardware", "Software", "Game", "Pengurus").forEach { category ->
+                            listOf("Hardware", "Software", "Game").forEach { category ->
                                 DropdownMenuItem(
-                                    text = { Text(category) },
+                                    text = {
+                                        Text(
+                                            text = category,
+                                            color = Black
+                                        )
+                                    },
                                     onClick = {
                                         selectedCategory = category
                                         showDropdown = false
@@ -272,7 +318,9 @@ fun AddSessionScreen(
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White,
                             focusedBorderColor = PrimaryColor,
-                            unfocusedBorderColor = Gray
+                            unfocusedBorderColor = Gray,
+                            focusedTextColor = Black,
+                            unfocusedTextColor = Black
                         )
                     )
                 }
@@ -312,8 +360,8 @@ fun ModeChipSession(
         onClick = onClick,
         modifier = modifier.height(40.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (isSelected) primaryColor else Color.White,
-            contentColor = if (isSelected) Color.White else primaryColor
+            containerColor = if (isSelected) PrimaryColor else Color.White,
+            contentColor = if (isSelected) Color.White else PrimaryColor // Changed to Black for unselected state
         ),
         shape = RoundedCornerShape(15.dp),
         border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, primaryColor) else null
