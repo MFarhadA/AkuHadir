@@ -1,6 +1,7 @@
 // HomeScreen.kt - Updated version dengan sticky header dan scrollable content
 package my.kelompok3.akuhadir.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -29,12 +30,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import my.kelompok3.akuhadir.data.model.StatusData
+import my.kelompok3.akuhadir.data.model.User
 import my.kelompok3.akuhadir.ui.theme.*
 import my.kelompok3.akuhadir.ui.components.AttendanceBottomSheet
 import my.kelompok3.akuhadir.ui.components.SessionAvailableCard
 import my.kelompok3.akuhadir.ui.components.SessionOwnerCard
 import my.kelompok3.akuhadir.ui.components.SessionOnlineCard
 import my.kelompok3.akuhadir.ui.components.SessionOfflineCard
+// untuk memamnggil databasenya
+import kotlinx.serialization.Serializable
+import my.kelompok3.akuhadir.data.model.SupabaseInstance
+
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
+import kotlin.math.log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +53,45 @@ fun HomeScreen(
     onNavigateToListSessions: () -> Unit,
     onNavigateToAttendance: () -> Unit,
 ) {
+
+
+
+    // Memanggil koneksi ke database
+    var connectionStatus by remember { mutableStateOf("Testing connection...") }
+    val  supabase = SupabaseInstance.client
+    // Test koneksi saat composable pertama kali dimuat
+    LaunchedEffect(Unit) {
+        try {
+            Log.d("HomeScreen", "Starting connection test from HomeScreen")
+            println("HomeScreen: Starting connection test")
+
+            val isConnected = SupabaseInstance.testConnection()
+
+            connectionStatus = if (isConnected) {
+                "Database connected successfully!"
+            } else {
+                "Database connection failed!"
+            }
+
+            Log.d("HomeScreen", "Connection status: $connectionStatus")
+            println("HomeScreen: Connection status: $connectionStatus")
+
+            // test pengambilan data
+
+            val users = supabase.from("user").select().decodeList<User>()
+
+            val user = supabase.from("user").select(columns = Columns.list("id_user, email,password")).decodeSingle<User>()
+            Log.d("HomeScreen", "User: ${user.email},${user.password}")
+            Log.d("HomeScreen", "User: ${users.size}, entah apa ini    ${users}")
+
+        } catch (e: Exception) {
+            connectionStatus = "Connection error: ${e.message}"
+            Log.e("HomeScreen", "Connection error: ${e.message}", e)
+            println("HomeScreen: Connection error: ${e.message}")
+        }
+
+    }
+
     // State untuk mengontrol visibility BottomSheet
     var showAttendanceBottomSheet by remember { mutableStateOf(false) }
 

@@ -23,6 +23,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import my.kelompok3.akuhadir.ui.theme.*
+// Database
+import my.kelompok3.akuhadir.data.model.SupabaseInstance
+import my.kelompok3.akuhadir.data.model.User
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -1,5 +1,6 @@
 package my.kelompok3.akuhadir.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -20,6 +22,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import my.kelompok3.akuhadir.ui.theme.*
+
+// database
+import my.kelompok3.akuhadir.data.model.SupabaseInstance
+import my.kelompok3.akuhadir.data.model.User
+import io.github.jan.supabase.postgrest.from
+
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+
+//logika
+import my.kelompok3.akuhadir.ui.logika.useDelayState
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +51,10 @@ fun RegisterScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
     var showConfirmPassword by remember { mutableStateOf(false) }
+    val  supabase = SupabaseInstance.client
+    val context = LocalContext.current // Ambil context dari lingkungan Compose
+    // Panggil fungsi delay
+    val (isRegisterEnabled, triggerRegisterDelay) = useDelayState(20_000)
 
     Box(
         modifier = Modifier
@@ -187,10 +209,39 @@ fun RegisterScreen(
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
+                val coroutineScope = rememberCoroutineScope()
 
                 // Register Button
                 Button(
-                    onClick = onNavigateToProfile,
+                    onClick = {
+                        triggerRegisterDelay() // Mulai jeda tombol
+                        coroutineScope.launch {
+                            if (password == confirmPassword) {
+                                val cek = User(email=email, password=password)
+                                val pengecekan = supabase.from("user").select().decodeList<User>()
+                                if (cek in pengecekan) {
+
+                                    Toast.makeText(context, "Email sudah terdaftar", Toast.LENGTH_SHORT).show()
+                                }else{
+
+                                    val user = User(email = email, password = password)
+
+                                    val response = withContext(Dispatchers.IO) {
+                                        supabase.from("user").insert(user)
+
+                                    }
+                                    if (response.data != null) {
+                                        onNavigateToProfile()
+                                    } else {
+                                        println("Kesalahan saat menyisipkan pengguna")
+                                    }
+                                }
+                            } else {
+                                println("Password tidak cocok")
+                            }
+                        }
+                    },
+                    enabled = isRegisterEnabled, // Gunakan state hasil useDelayState
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
