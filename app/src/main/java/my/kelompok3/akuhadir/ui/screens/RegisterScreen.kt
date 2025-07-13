@@ -1,5 +1,6 @@
 package my.kelompok3.akuhadir.ui.screens
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -28,15 +29,15 @@ import my.kelompok3.akuhadir.data.model.SupabaseInstance
 import my.kelompok3.akuhadir.data.model.User
 import io.github.jan.supabase.postgrest.from
 
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import io.github.jan.supabase.postgrest.query.Columns
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
 
 //logika
 import my.kelompok3.akuhadir.ui.logika.useDelayState
+import kotlinx.serialization.Serializable
+import org.mindrot.jbcrypt.BCrypt
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,6 +46,7 @@ fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToProfile: () -> Unit
 ) {
+
     val primaryColor = Color(0xFF6366F1)
     var email by remember { mutableStateOf("mfarhadainc@gmail.com") }
     var password by remember { mutableStateOf("") }
@@ -54,6 +56,7 @@ fun RegisterScreen(
     val  supabase = SupabaseInstance.client
     val context = LocalContext.current // Ambil context dari lingkungan Compose
     // Panggil fungsi delay
+
     val (isRegisterEnabled, triggerRegisterDelay) = useDelayState(20_000)
 
     Box(
@@ -217,21 +220,50 @@ fun RegisterScreen(
                         triggerRegisterDelay() // Mulai jeda tombol
                         coroutineScope.launch {
                             if (password == confirmPassword) {
-                                val cek = User(email=email, password=password)
+                                // Hash password sebelum menyimpan
+
+                                val hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt()) // menggunakan pw yang sudah di enkrip
+
+                                val newUser = User(email = email, password = hashedPassword)
                                 val pengecekan = supabase.from("user").select().decodeList<User>()
-                                if (cek in pengecekan) {
+                                val isUserRegistered = pengecekan.any { it.email == newUser.email }
 
-                                    Toast.makeText(context, "Email sudah terdaftar", Toast.LENGTH_SHORT).show()
-                                }else{
+                                if (isUserRegistered) {
+                                    Toast.makeText(context, "Pengguna sudah terdaftar", Toast.LENGTH_SHORT).show()
+                                    onNavigateToLogin()
+                                } else {
+                                    val user = User(email = email, password = hashedPassword) // Gunakan hashed password
 
-                                    val user = User(email = email, password = password)
+
+
 
                                     val response = withContext(Dispatchers.IO) {
                                         supabase.from("user").insert(user)
 
+
+
                                     }
                                     if (response.data != null) {
+                                        // Ambil ID pengguna berdasarkan email yang baru didaftarkan
+                                        val userResponse = supabase.from("user").select {
+                                            filter {
+                                                eq("email", email) // Filter berdasarkan email
+                                            }
+                                        }.decodeSingle<User>() // Ambil satu pengguna
+
+                                        val currentUserId = userResponse.id_user // Ambil ID pengguna
+
+                                        // Simpan data registrasi
+                                        val isDataSaved = UserRegistrationManager.saveRegistrationData(email)
+
+                                        Log.d("HomeScreen", "User: ${newUser.email}, ID: $currentUserId")
+                                        print("ini datanya: ${newUser.email} dan ${newUser.password} dan ${currentUserId}")
+                                        // data sudah masuk
+                                        println("User data: ID=${currentUserId}")
                                         onNavigateToProfile()
+                                        // kerika sudah pindah page data hila di page ini
+                                        println("User data: ID=${currentUserId}")
+
                                     } else {
                                         println("Kesalahan saat menyisipkan pengguna")
                                     }

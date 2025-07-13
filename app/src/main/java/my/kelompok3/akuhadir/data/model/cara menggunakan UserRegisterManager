@@ -1,0 +1,239 @@
+// ======= CONTOH 1: Di ProfileScreen.kt =======
+package my.kelompok3.akuhadir.ui.screens
+
+import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
+import androidx.compose.runtime.*
+
+@Composable
+fun ProfileScreen() {
+    // Mengambil data yang sudah disimpan
+    val currentUserId = UserRegistrationManager.getCurrentUserId()
+    val currentUserEmail = UserRegistrationManager.getCurrentUserEmail()
+    val hasData = UserRegistrationManager.hasRegistrationData()
+
+    // Menggunakan data
+    LaunchedEffect(Unit) {
+        if (hasData) {
+            println("User ID: $currentUserId")
+            println("User Email: $currentUserEmail")
+        } else {
+            println("Tidak ada data registrasi")
+        }
+    }
+
+    // Contoh penggunaan dalam UI
+    Column {
+        if (currentUserId != null) {
+            Text("Creating profile for User ID: $currentUserId")
+            Text("Email: ${currentUserEmail ?: "Unknown"}")
+        } else {
+            Text("No user data available")
+        }
+    }
+}
+
+// ======= CONTOH 2: Di ViewModel =======
+package my.kelompok3.akuhadir.viewmodel
+
+import androidx.lifecycle.ViewModel
+import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+
+class ProfileViewModel : ViewModel() {
+    private val _userId = MutableStateFlow<Int?>(null)
+    val userId: StateFlow<Int?> = _userId
+
+    private val _userEmail = MutableStateFlow<String?>(null)
+    val userEmail: StateFlow<String?> = _userEmail
+
+    init {
+        loadUserData()
+    }
+
+    private fun loadUserData() {
+        _userId.value = UserRegistrationManager.getCurrentUserId()
+        _userEmail.value = UserRegistrationManager.getCurrentUserEmail()
+    }
+
+    fun saveProfile(name: String, phone: String) {
+        val userId = UserRegistrationManager.getCurrentUserId()
+        if (userId != null) {
+            // Simpan profile dengan user ID
+            // ... logic untuk menyimpan profile
+        }
+    }
+}
+
+// ======= CONTOH 3: Di Repository =======
+package my.kelompok3.akuhadir.data.repository
+
+import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
+import my.kelompok3.akuhadir.data.model.SupabaseInstance
+import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class UserProfileRepository {
+    private val supabase = SupabaseInstance.client
+
+    suspend fun saveUserProfile(name: String, phone: String, address: String): Boolean {
+        return try {
+            // Ambil user ID dari UserRegistrationManager
+            val userId = UserRegistrationManager.getCurrentUserId()
+
+            if (userId != null) {
+                val userProfile = mapOf(
+                    "user_id" to userId,
+                    "name" to name,
+                    "phone" to phone,
+                    "address" to address
+                )
+
+                withContext(Dispatchers.IO) {
+                    supabase.from("user_profile").insert(userProfile)
+                }
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            println("Error saving profile: ${e.message}")
+            false
+        }
+    }
+}
+
+// ======= CONTOH 4: Di NavigationScreen.kt =======
+package my.kelompok3.akuhadir.ui.navigation
+
+import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
+
+@Composable
+fun AppNavigation() {
+    val navController = rememberNavController()
+
+    // Cek apakah ada data registrasi saat aplikasi dimulai
+    LaunchedEffect(Unit) {
+        if (UserRegistrationManager.hasRegistrationData()) {
+            val userId = UserRegistrationManager.getCurrentUserId()
+            val email = UserRegistrationManager.getCurrentUserEmail()
+
+            // Redirect ke profile screen jika ada data yang belum selesai
+            navController.navigate("profile_screen")
+        }
+    }
+}
+
+// ======= CONTOH 5: Di Helper/Utility Class =======
+package my.kelompok3.akuhadir.utils
+
+import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
+
+object UserUtils {
+    fun isUserLoggedIn(): Boolean {
+        return UserRegistrationManager.hasRegistrationData()
+    }
+
+    fun getCurrentUserInfo(): Pair<Int?, String?> {
+        return Pair(
+            UserRegistrationManager.getCurrentUserId(),
+            UserRegistrationManager.getCurrentUserEmail()
+        )
+    }
+
+    fun logoutUser() {
+        UserRegistrationManager.clearRegistrationData()
+    }
+}
+
+// ======= CONTOH 6: Di Screen dengan Kondisi =======
+package my.kelompok3.akuhadir.ui.screens
+
+import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
+
+@Composable
+fun DashboardScreen() {
+    var userInfo by remember { mutableStateOf<Pair<Int?, String?>>(null to null) }
+
+    LaunchedEffect(Unit) {
+        val userId = UserRegistrationManager.getCurrentUserId()
+        val email = UserRegistrationManager.getCurrentUserEmail()
+        userInfo = userId to email
+    }
+
+    // Tampilkan konten berdasarkan kondisi
+    when {
+        userInfo.first != null -> {
+            // User sudah login, tampilkan dashboard
+            Column {
+                Text("Welcome, ${userInfo.second}")
+                Text("User ID: ${userInfo.first}")
+            }
+        }
+        else -> {
+            // User belum login, tampilkan login form
+            Text("Please login first")
+        }
+    }
+}
+
+// ======= CONTOH 7: Di Service Class =======
+package my.kelompok3.akuhadir.service
+
+import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
+
+class AttendanceService {
+    suspend fun markAttendance(): Boolean {
+        val userId = UserRegistrationManager.getCurrentUserId()
+
+        return if (userId != null) {
+            // Logic untuk menyimpan kehadiran
+            try {
+                // ... save attendance logic
+                true
+            } catch (e: Exception) {
+                false
+            }
+        } else {
+            println("User not logged in")
+            false
+        }
+    }
+}
+
+// ======= CONTOH 8: Penggunaan dengan Error Handling =======
+package my.kelompok3.akuhadir.ui.screens
+
+import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
+
+@Composable
+fun AnyScreen() {
+    val coroutineScope = rememberCoroutineScope()
+
+    fun handleUserAction() {
+        coroutineScope.launch {
+            try {
+                val userId = UserRegistrationManager.getCurrentUserId()
+                val email = UserRegistrationManager.getCurrentUserEmail()
+
+                when {
+                    userId == null -> {
+                        // Handle case: user not logged in
+                        println("User not logged in")
+                    }
+                    email == null -> {
+                        // Handle case: incomplete data
+                        println("Incomplete user data")
+                    }
+                    else -> {
+                        // Handle case: user data complete
+                        println("User data: ID=$userId, Email=$email")
+                    }
+                }
+            } catch (e: Exception) {
+                println("Error accessing user data: ${e.message}")
+            }
+        }
+    }
+}

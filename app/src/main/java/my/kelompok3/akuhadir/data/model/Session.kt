@@ -11,3 +11,4 @@ data class Session(
     val meetLink: String = "",
     val room: String = ""
 )
+

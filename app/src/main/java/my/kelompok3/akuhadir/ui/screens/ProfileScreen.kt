@@ -1,5 +1,6 @@
 package my.kelompok3.akuhadir.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,12 +10,29 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.jan.supabase.postgrest.from
+
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+import my.kelompok3.akuhadir.ui.logika.useDelayState
 import my.kelompok3.akuhadir.ui.theme.*
+
+
+// database
+import my.kelompok3.akuhadir.data.model.SupabaseInstance
+import my.kelompok3.akuhadir.data.model.User
+
+import kotlinx.coroutines.Dispatchers
+import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
+
+//logika
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,8 +44,17 @@ fun ProfileScreen(
     var nim by remember { mutableStateOf("23552011063") }
     var selectedDivision by remember { mutableStateOf("Hardware") }
     var expanded by remember { mutableStateOf(false) }
+    // database
+    val  supabase = SupabaseInstance.client
+    val context = LocalContext.current // Ambil context dari lingkungan Compose
+    // Panggil fungsi delay
+    val (isRegisterEnabled, triggerRegisterDelay) = useDelayState(20_000)
+    val currentUserId = UserRegistrationManager.getCurrentUserId()
 
-    val divisions = listOf("Hardware", "Software", "Game")
+
+    val divisions = listOf("hardware", "software", "game")
+
+    println("User data: ID=$currentUserId")
 
     Box(
         modifier = Modifier
@@ -161,7 +188,8 @@ fun ProfileScreen(
                     ) {
                         OutlinedTextField(
                             value = selectedDivision,
-                            onValueChange = {},
+                            onValueChange = {selectedDivision=it.lowercase()},
+
                             readOnly = true,
                             trailingIcon = {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
@@ -196,10 +224,56 @@ fun ProfileScreen(
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
+                val coroutineScope = rememberCoroutineScope()
+
 
                 // Submit Button
                 Button(
-                    onClick = onNavigateToHome,
+                    onClick =
+                    {
+                        triggerRegisterDelay() // Mulai jeda tombol
+                        coroutineScope.launch {
+                            if (nim != "" && fullName != "" && selectedDivision != "") {
+                                // Mengambil ID pengguna yang sudah disimpan saat registrasi
+                                val currentUserId = UserRegistrationManager.getCurrentUserId()
+
+
+                                // Memeriksa apakah ID pengguna valid
+                                if (currentUserId != null) {
+                                    // Membuat objek UserProfile dengan ID pengguna
+                                    val userProfile = User(nama = fullName, nim = nim.toIntOrNull() ?: 0, divisi = selectedDivision, id_user = currentUserId)
+
+                                    // Memeriksa apakah pengguna sudah terdaftar di user_profile
+                                    val pengecekan = supabase.from("user_profile").select().decodeList<User>()
+                                    val existingUser = pengecekan.find { it.nim == userProfile.nim }
+
+                                    if (existingUser != null) {
+                                        Toast.makeText(context, "nim anda sama dengan yang sudah terdaftar", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        // Menyimpan data pengguna ke user_profile
+                                        val response = withContext(Dispatchers.IO) {
+                                            supabase.from("user_profile").insert(userProfile)
+                                        }
+
+                                        if (response.data != null) {
+                                            onNavigateToHome()
+                                            Toast.makeText(context, "Pengisian profile berhasil disimpan", Toast.LENGTH_SHORT).show()
+
+                                        } else {
+                                            println("Kesalahan saat menyisipkan pengguna")
+                                        }
+                                    }
+                                } else {
+                                    println("ID pengguna tidak ditemukan")
+                                    Toast.makeText(context, "Kesalahan: ID pengguna tidak ditemukan", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                println("Data belum di input")
+                                Toast.makeText(context, "Kolom belum di isi", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    enabled = isRegisterEnabled, // Gunakan state hasil useDelayState
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),

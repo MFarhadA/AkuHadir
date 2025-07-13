@@ -81,6 +81,12 @@ fun HomeScreen(
             val users = supabase.from("user").select().decodeList<User>()
 
             val user = supabase.from("user").select(columns = Columns.list("id_user, email,password")).decodeSingle<User>()
+            val deletedCity = supabase.from("user").delete {
+                select()
+                filter {
+                    eq("id_user", 22)
+                }
+            }.decodeSingle<User>()
             Log.d("HomeScreen", "User: ${user.email},${user.password}")
             Log.d("HomeScreen", "User: ${users.size}, entah apa ini    ${users}")
 
