@@ -235,11 +235,8 @@ fun RegisterScreen(
                                     val user = User(email = email, password = hashedPassword) // Gunakan hashed password
 
 
-
-
                                     val response = withContext(Dispatchers.IO) {
                                         supabase.from("user").insert(user)
-
 
 
                                     }

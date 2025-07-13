@@ -90,6 +90,7 @@ object UserRegistrationManager {
      * @param userId ID user
      * @param email Email user
      */
+
     fun setRegistrationData(userId: Int, email: String) {
         currentUserId = userId
         currentUserEmail = email

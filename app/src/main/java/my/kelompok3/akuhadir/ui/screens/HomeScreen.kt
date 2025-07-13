@@ -43,6 +43,7 @@ import my.kelompok3.akuhadir.data.model.SupabaseInstance
 
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
+import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
 import kotlin.math.log
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,11 +60,20 @@ fun HomeScreen(
     // Memanggil koneksi ke database
     var connectionStatus by remember { mutableStateOf("Testing connection...") }
     val  supabase = SupabaseInstance.client
+
+    // id user dari login & register
+    val currentUserId = UserRegistrationManager.getCurrentUserId()
+    val currentUserEmail = UserRegistrationManager.getCurrentUserEmail()
+
+    // Gunakan currentUserId dan currentUserEmail sesuai kebutuhan
+    Text(text = "Welcome, $currentUserEmail! Your ID is $currentUserId")
     // Test koneksi saat composable pertama kali dimuat
     LaunchedEffect(Unit) {
         try {
             Log.d("HomeScreen", "Starting connection test from HomeScreen")
             println("HomeScreen: Starting connection test")
+            println("HomeScreen: Welcome, $currentUserEmail! Your ID is $currentUserId")
+
 
             val isConnected = SupabaseInstance.testConnection()
 
@@ -79,12 +89,12 @@ fun HomeScreen(
             // test pengambilan data
 
             val users = supabase.from("user").select().decodeList<User>()
-
+            // Test penghapusan data
             val user = supabase.from("user").select(columns = Columns.list("id_user, email,password")).decodeSingle<User>()
             val deletedCity = supabase.from("user").delete {
                 select()
                 filter {
-                    eq("id_user", 22)
+                    eq("id_user", 22) //<-- angka bisa di ubah untuk menghapus sesuai id_user
                 }
             }.decodeSingle<User>()
             Log.d("HomeScreen", "User: ${user.email},${user.password}")
