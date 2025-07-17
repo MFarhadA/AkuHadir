@@ -31,7 +31,7 @@ import my.kelompok3.akuhadir.ui.theme.GreenColor
 
 // SessionOfflineCard.kt - Component untuk anggota yang lihat sesi offline
 @Composable
-fun SessionOfflineCard(
+public fun SessionOfflineCard(
     title: String,
     meeting: String,
     location: String,

@@ -19,7 +19,7 @@ import my.kelompok3.akuhadir.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AttendanceBottomSheet(
+public fun AttendanceBottomSheet(
     onDismiss: () -> Unit,
     onSubmitAttendance: () -> Unit
 ) {

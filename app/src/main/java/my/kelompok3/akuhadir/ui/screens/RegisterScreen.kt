@@ -14,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color.Companion.Black
+import androidx.compose.ui.graphics.Color.Companion.Gray
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -22,9 +24,11 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import my.kelompok3.akuhadir.ui.theme.*
 
-// database
+// Theme colors
+import my.kelompok3.akuhadir.ui.theme.BackgroundColor
+
+// Database
 import my.kelompok3.akuhadir.data.model.SupabaseInstance
 import my.kelompok3.akuhadir.data.model.User
 import io.github.jan.supabase.postgrest.from
@@ -34,11 +38,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
 
-//logika
+// Logic
 import my.kelompok3.akuhadir.ui.logika.useDelayState
-import kotlinx.serialization.Serializable
+import my.kelompok3.akuhadir.ui.theme.PrimaryColor
 import org.mindrot.jbcrypt.BCrypt
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,23 +49,24 @@ fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToProfile: () -> Unit
 ) {
-
-    val primaryColor = Color(0xFF6366F1)
     var email by remember { mutableStateOf("mfarhadainc@gmail.com") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
     var showConfirmPassword by remember { mutableStateOf(false) }
-    val  supabase = SupabaseInstance.client
-    val context = LocalContext.current // Ambil context dari lingkungan Compose
-    // Panggil fungsi delay
+    var isLoading by remember { mutableStateOf(false) }
 
+    val supabase = SupabaseInstance.client
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    // Panggil fungsi delay
     val (isRegisterEnabled, triggerRegisterDelay) = useDelayState(20_000)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundColor) // Warna background abu-abu muda sesuai screenshot
+            .background(BackgroundColor)
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
@@ -83,10 +87,8 @@ fun RegisterScreen(
                     text = "Aku\nHadir",
                     fontSize = 36.sp,
                     fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Start,
+                    textAlign = TextAlign.Center,
                     color = Color.White,
-                    modifier = Modifier.wrapContentWidth()
-                        .padding(start = 0.dp),
                     lineHeight = 40.sp
                 )
             }
@@ -126,11 +128,14 @@ fun RegisterScreen(
                         shape = RoundedCornerShape(14.dp),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         singleLine = true,
+                        enabled = !isLoading,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White,
                             focusedBorderColor = PrimaryColor,
-                            unfocusedBorderColor = Gray
+                            unfocusedBorderColor = Gray,
+                            focusedTextColor = Black,
+                            unfocusedTextColor = Black
                         )
                     )
                 }
@@ -156,6 +161,7 @@ fun RegisterScreen(
                         visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         singleLine = true,
+                        enabled = !isLoading,
                         trailingIcon = {
                             IconButton(onClick = { showPassword = !showPassword }) {
                                 Icon(
@@ -168,7 +174,9 @@ fun RegisterScreen(
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White,
                             focusedBorderColor = PrimaryColor,
-                            unfocusedBorderColor = Gray
+                            unfocusedBorderColor = Gray,
+                            focusedTextColor = Black,
+                            unfocusedTextColor = Black
                         )
                     )
                 }
@@ -194,6 +202,7 @@ fun RegisterScreen(
                         visualTransformation = if (showConfirmPassword) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         singleLine = true,
+                        enabled = !isLoading,
                         trailingIcon = {
                             IconButton(onClick = { showConfirmPassword = !showConfirmPassword }) {
                                 Icon(
@@ -206,92 +215,117 @@ fun RegisterScreen(
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White,
                             focusedBorderColor = PrimaryColor,
-                            unfocusedBorderColor = Gray
+                            unfocusedBorderColor = Gray,
+                            focusedTextColor = Black,
+                            unfocusedTextColor = Black
                         )
                     )
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
-                val coroutineScope = rememberCoroutineScope()
 
                 // Register Button
                 Button(
                     onClick = {
-                        triggerRegisterDelay() // Mulai jeda tombol
+                        if (email.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
+                            Toast.makeText(context, "Semua field harus diisi", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        if (password != confirmPassword) {
+                            Toast.makeText(context, "Password tidak cocok", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        if (password.length < 6) {
+                            Toast.makeText(context, "Password minimal 6 karakter", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        triggerRegisterDelay()
+                        isLoading = true
+
                         coroutineScope.launch {
-                            if (password == confirmPassword) {
+                            try {
                                 // Hash password sebelum menyimpan
+                                val hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt())
 
-                                val hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt()) // menggunakan pw yang sudah di enkrip
-
-                                val newUser = User(email = email, password = hashedPassword)
-                                val pengecekan = supabase.from("user").select().decodeList<User>()
-                                val isUserRegistered = pengecekan.any { it.email == newUser.email }
+                                // Cek apakah user sudah terdaftar
+                                val existingUsers = supabase.from("user").select().decodeList<User>()
+                                val isUserRegistered = existingUsers.any { it.email == email }
 
                                 if (isUserRegistered) {
-                                    Toast.makeText(context, "Pengguna sudah terdaftar", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Email sudah terdaftar", Toast.LENGTH_SHORT).show()
                                     onNavigateToLogin()
                                 } else {
-                                    val user = User(email = email, password = hashedPassword) // Gunakan hashed password
-
+                                    val user = User(email = email, password = hashedPassword)
 
                                     val response = withContext(Dispatchers.IO) {
                                         supabase.from("user").insert(user)
-
-
                                     }
+
                                     if (response.data != null) {
                                         // Ambil ID pengguna berdasarkan email yang baru didaftarkan
                                         val userResponse = supabase.from("user").select {
                                             filter {
-                                                eq("email", email) // Filter berdasarkan email
+                                                eq("email", email)
                                             }
-                                        }.decodeSingle<User>() // Ambil satu pengguna
+                                        }.decodeSingle<User>()
 
-                                        val currentUserId = userResponse.id_user // Ambil ID pengguna
+                                        val currentUserId = userResponse.id_user
 
                                         // Simpan data registrasi
                                         val isDataSaved = UserRegistrationManager.saveRegistrationData(email)
 
-                                        Log.d("HomeScreen", "User: ${newUser.email}, ID: $currentUserId")
-                                        print("ini datanya: ${newUser.email} dan ${newUser.password} dan ${currentUserId}")
-                                        // data sudah masuk
-                                        println("User data: ID=${currentUserId}")
-                                        onNavigateToProfile()
-                                        // kerika sudah pindah page data hila di page ini
-                                        println("User data: ID=${currentUserId}")
+                                        Log.d("RegisterScreen", "User: ${user.email}, ID: $currentUserId")
 
+                                        Toast.makeText(context, "Registrasi berhasil!", Toast.LENGTH_SHORT).show()
+                                        onNavigateToProfile()
                                     } else {
-                                        println("Kesalahan saat menyisipkan pengguna")
+                                        Toast.makeText(context, "Gagal mendaftar, coba lagi", Toast.LENGTH_SHORT).show()
                                     }
                                 }
-                            } else {
-                                println("Password tidak cocok")
+                            } catch (e: Exception) {
+                                Log.e("RegisterScreen", "Error during registration", e)
+                                Toast.makeText(context, "Terjadi kesalahan: ${e.message}", Toast.LENGTH_SHORT).show()
+                            } finally {
+                                isLoading = false
                             }
                         }
                     },
-                    enabled = isRegisterEnabled, // Gunakan state hasil useDelayState
+                    enabled = isRegisterEnabled && !isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)
                 ) {
-                    Text(
-                        text = "Daftar",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = "Daftar",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(5.dp))
 
                 // Login Link
-                TextButton(onClick = onNavigateToLogin) {
+                TextButton(
+                    onClick = onNavigateToLogin,
+                    enabled = !isLoading
+                ) {
                     Text(
                         text = "Punya akun?",
-                        color = PrimaryColor.copy(alpha = 0.7f),
+                        color = PrimaryColor,  // Warna biru sesuai UI
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold
                     )

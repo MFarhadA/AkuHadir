@@ -1,4 +1,4 @@
-// SessionAvailableCard.kt
+// SessionOwnerCard.kt
 package my.kelompok3.akuhadir.ui.components
 
 import androidx.compose.foundation.background
@@ -21,7 +21,7 @@ import my.kelompok3.akuhadir.ui.theme.GreenColor
 import my.kelompok3.akuhadir.ui.theme.RedColor
 
 @Composable
-fun SessionOwnerCard(
+public fun SessionOwnerCard(
     title: String,
     meeting: String,
     onEditSession: () -> Unit,
@@ -29,6 +29,7 @@ fun SessionOwnerCard(
     onViewParticipants: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -72,8 +73,6 @@ fun SessionOwnerCard(
                         modifier = Modifier.size(18.dp)
                     )
                 }
-
-
 
                 // Tombol Tutup Sesi
                 Button(

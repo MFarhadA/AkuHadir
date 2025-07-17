@@ -1,4 +1,6 @@
 // HomeScreen.kt - Updated version dengan sticky header dan scrollable content
+@file:Suppress("NAME_SHADOWING")
+
 package my.kelompok3.akuhadir.ui.screens
 
 import android.util.Log
@@ -36,15 +38,24 @@ import my.kelompok3.akuhadir.ui.components.AttendanceBottomSheet
 import my.kelompok3.akuhadir.ui.components.SessionAvailableCard
 import my.kelompok3.akuhadir.ui.components.SessionOwnerCard
 import my.kelompok3.akuhadir.ui.components.SessionOnlineCard
-import my.kelompok3.akuhadir.ui.components.SessionOfflineCard
+import my.kelompok3.akuhadir.ui.components.SessionOnlineCard
 // untuk memamnggil databasenya
 import kotlinx.serialization.Serializable
 import my.kelompok3.akuhadir.data.model.SupabaseInstance
 
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.filter.FilterOperation
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
-import kotlin.math.log
+import my.kelompok3.akuhadir.data.model.UserProfile
+import my.kelompok3.akuhadir.ui.components.SessionOfflineCard
+import my.kelompok3.akuhadir.data.manager.RoleManager
+import my.kelompok3.akuhadir.data.model.RoleData
+import my.kelompok3.akuhadir.data.model.RoleType
+import my.kelompok3.akuhadir.ui.components.SessionCardMember
+import my.kelompok3.akuhadir.ui.components.SessionSekretarisCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,8 +65,11 @@ fun HomeScreen(
     onNavigateToListSessions: () -> Unit,
     onNavigateToAttendance: () -> Unit,
 ) {
-
-
+    val roleManager = remember { RoleManager() }
+    var currentUserRole by remember { mutableStateOf<RoleData?>(null) }
+    var isLoadingRole by remember { mutableStateOf(false) }
+    var roleError by remember { mutableStateOf<String?>(null) }
+    var roleStatistics by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
     // Memanggil koneksi ke database
     var connectionStatus by remember { mutableStateOf("Testing connection...") }
@@ -64,6 +78,10 @@ fun HomeScreen(
     // id user dari login & register
     val currentUserId = UserRegistrationManager.getCurrentUserId()
     val currentUserEmail = UserRegistrationManager.getCurrentUserEmail()
+
+    var userProfile by remember { mutableStateOf<UserProfile?>(null) }
+    var isLoadingProfile by remember { mutableStateOf(false) }
+    var profileError by remember { mutableStateOf<String?>(null) }
 
     // Gunakan currentUserId dan currentUserEmail sesuai kebutuhan
     Text(text = "Welcome, $currentUserEmail! Your ID is $currentUserId")
@@ -97,6 +115,7 @@ fun HomeScreen(
                     eq("id_user", 22) //<-- angka bisa di ubah untuk menghapus sesuai id_user
                 }
             }.decodeSingle<User>()
+
             Log.d("HomeScreen", "User: ${user.email},${user.password}")
             Log.d("HomeScreen", "User: ${users.size}, entah apa ini    ${users}")
 
@@ -106,6 +125,70 @@ fun HomeScreen(
             println("HomeScreen: Connection error: ${e.message}")
         }
 
+    }
+
+    LaunchedEffect(Unit) {
+        try {
+
+            val currentUserId = UserRegistrationManager.getCurrentUserId()
+            val result = supabase.from("user_profile")
+                .select{
+                    select()
+                    filter {
+                        if (currentUserId != null) {
+                            eq("id_user", currentUserId)
+                        }
+                    }
+
+                }
+                .decodeSingle<UserProfile>()
+
+            userProfile = result
+
+            Log.d("HomeScreen", "User Profile: ${userProfile?.nama}, NIM: ${userProfile?.nim}")
+
+        } catch (e: Exception) {
+            connectionStatus = "Connection error: ${e.message}"
+            Log.e("HomeScreen", "Connection error: ${e.message}", e)
+        }
+    }
+
+    // Fetch user role dan statistics
+    LaunchedEffect(Unit) {
+        isLoadingRole = true
+        roleError = null
+
+        try {
+            val currentUserId = UserRegistrationManager.getCurrentUserId()
+            if (currentUserId != null) {
+                // Ambil role user saat ini
+                currentUserRole = roleManager.getUserRoleByUserId(currentUserId)
+
+                // Ambil statistik role
+                roleStatistics = roleManager.getRoleStatistics()
+
+                // Log role information
+                currentUserRole?.let { roleData ->
+                    Log.d("HomeScreen", "Current User Role: ${roleData.role}")
+                    Log.d("HomeScreen", "Role Display Name: ${roleManager.getRoleDisplayName(roleData.role)}")
+
+                    // Check specific roles
+                    val isAnggota = roleManager.isAnggota(currentUserId)
+                    val isSekretaris = roleManager.isSekretaris(currentUserId)
+                    val isPengurus = roleManager.isPengurus(currentUserId)
+
+                    Log.d("HomeScreen", "Is Anggota: $isAnggota, Is Sekretaris: $isSekretaris, Is Pengurus: $isPengurus")
+                }
+
+                // Log statistics
+                Log.d("HomeScreen", "Role Statistics: $roleStatistics")
+            }
+        } catch (e: Exception) {
+            roleError = "Error loading role: ${e.message}"
+            Log.e("HomeScreen", "Error loading user role: ${e.message}", e)
+        } finally {
+            isLoadingRole = false
+        }
     }
 
     // State untuk mengontrol visibility BottomSheet
@@ -121,6 +204,7 @@ fun HomeScreen(
 
     // Scroll state untuk konten yang dapat di-scroll
     val scrollState = rememberScrollState()
+
 
     Box(
         modifier = Modifier
@@ -191,15 +275,17 @@ fun HomeScreen(
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
+                            userProfile?.let {
+                                Text(
+                                    text = it.nama,
+                                    color = Black,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    lineHeight = 18.sp
+                                )
+                            }
                             Text(
-                                text = "Muhammad Farhad Ajilla",
-                                color = Black,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                lineHeight = 18.sp
-                            )
-                            Text(
-                                text = "2355201063",
+                                text = userProfile?.nim.toString(),
                                 color = Black,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
@@ -296,87 +382,35 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+
+            currentUserRole?.let { roleData ->
+                when (roleManager.getRoleType(roleData.role)) {
+                    RoleType.PENGURUS -> {
+                        SessionCardMember()
+                    }
+                    RoleType.SEKRETARIS -> {
+                        SessionSekretarisCard(
+                            onNavigateToAddSession = onNavigateToAddSession
+                        )
+                    }
+                    RoleType.ANGGOTA -> {
+                        SessionCardMember()
+                    }
+                    null -> {
+                        // Handle unknown role
+                        Text(
+                            text = "Role tidak dikenali",
+                            color = Color.Gray,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+            }
             // Session Card - Menggunakan components yang berbeda berdasarkan sessionType
-            when (sessionType) {
-                "none" -> {
-                    SessionAvailableCard(
-                        onNavigateToAddSession = onNavigateToAddSession
-                    )
-                }
-                "owner" -> {
-                    SessionOwnerCard(
-                        title = "Pembelajaran Design Wireframe",
-                        meeting = "Pertemuan 16",
-                        onEditSession = {
-                            // Logic untuk mengedit sesi
-                        },
-                        onCloseSession = {
-                            // Logic untuk menutup sesi
-                            sessionType = "none"
-                        },
-                        onViewParticipants = {
-                            // Logic untuk melihat peserta
-                        }
-                    )
-                }
-                "online" -> {
-                    SessionOnlineCard(
-                        title = "Pembelajaran Design Wireframe",
-                        meeting = "Pertemuan 16",
-                        time = "10:00 WIB",
-                        onJoinMeeting = {
-                            // Logic untuk join meeting (buka link meet)
-                        }
-                    )
-                }
-                "offline" -> {
-                    SessionOfflineCard(
-                        title = "Pembelajaran Design Wireframe",
-                        meeting = "Pertemuan 16",
-                        location = "B 201",
-                        time = "11:00 WIB"
-                    )
-                }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Buttons untuk demo (hapus ini di production)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = { sessionType = "none" },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = GrayColor)
-                ) {
-                    Text("None", fontSize = 9.sp, color = Color.White)
-                }
-                Button(
-                    onClick = { sessionType = "owner" },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = RedColor)
-                ) {
-                    Text("Owner", fontSize = 9.sp, color = Color.White)
-                }
-                Button(
-                    onClick = { sessionType = "online" },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = GreenColor)
-                ) {
-                    Text("Online", fontSize = 9.sp, color = Color.White)
-                }
-                Button(
-                    onClick = { sessionType = "offline" },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)
-                ) {
-                    Text("Offline", fontSize = 9.sp, color = Color.White)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             // Session List Header
             Row(

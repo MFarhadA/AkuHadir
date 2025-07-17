@@ -19,10 +19,12 @@ import androidx.compose.ui.unit.sp
 import my.kelompok3.akuhadir.ui.theme.GreenColor
 
 @Composable
-fun SessionAvailableCard(
+public fun SessionAvailableCard(
     onNavigateToAddSession: () -> Unit,
     modifier: Modifier = Modifier
+
 ) {
+
     Card(
         modifier = modifier
             .fillMaxWidth()

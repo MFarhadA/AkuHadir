@@ -10,12 +10,12 @@ val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
-val BackgroundColor = Color(0xFFE3EEFA)
+public val BackgroundColor = Color(0xFFE3EEFA)
 val Black = Color(0xFF2F2F2F)
 val Gray = Color(0xFFC4C4C4)
 
 // Custom colors
-val PrimaryColor = Color(0xFF687FE5)
+public val PrimaryColor = Color(0xFF687FE5)
 val GreenColor = Color(0xFF55AD9B)
 val RedColor = Color(0xFFCD5656)
 val GrayColor = Color(0xFF9CA3AF)

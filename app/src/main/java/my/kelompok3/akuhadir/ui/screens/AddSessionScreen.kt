@@ -1,6 +1,8 @@
 package my.kelompok3.akuhadir.ui.screens
 
 import android.app.TimePickerDialog
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -19,6 +21,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import my.kelompok3.akuhadir.data.model.Session
+import my.kelompok3.akuhadir.data.model.SupabaseInstance
 import my.kelompok3.akuhadir.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,7 +36,6 @@ fun AddSessionScreen(
     onNavigateBack: () -> Unit,
     onCreateSession: () -> Unit
 ) {
-
     var selectedCategory by remember { mutableStateOf("Hardware") }
     var subjectName by remember { mutableStateOf("Pembelajaran UI/UX") }
     var meetingNumber by remember { mutableStateOf("9") }
@@ -36,11 +44,14 @@ fun AddSessionScreen(
     var meetingLocation by remember { mutableStateOf("Ruang Lab Komputer") }
     var selectedMode by remember { mutableStateOf("Offline") }
     var showDropdown by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
-    // Waktu Masuk
+    val supabase = SupabaseInstance.client
     val context = LocalContext.current
     val calendar = java.util.Calendar.getInstance()
+    val scope = rememberCoroutineScope()
 
+    // Time Picker Dialog
     val timePickerDialog = remember {
         TimePickerDialog(
             context,
@@ -50,8 +61,61 @@ fun AddSessionScreen(
             },
             calendar.get(java.util.Calendar.HOUR_OF_DAY),
             calendar.get(java.util.Calendar.MINUTE),
-            true // true = 24 jam format, false = AM/PM
+            true
         )
+    }
+
+    // Function to insert session to Supabase
+    fun insertSession() {
+        if (subjectName.isEmpty() || meetingNumber.isEmpty() || meetingTime.isEmpty() ||
+            selectedCategory.isEmpty() || selectedMode.isEmpty()) {
+            Toast.makeText(context, "Semua field harus diisi", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Validate meeting link for online mode
+        if (selectedMode == "Online" && meetingLink.isEmpty()) {
+            Toast.makeText(context, "Link meet harus diisi untuk sesi online", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Validate meeting location for offline mode
+        if (selectedMode == "Offline" && meetingLocation.isEmpty()) {
+            Toast.makeText(context, "Lokasi ruangan harus diisi untuk sesi offline", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        isLoading = true
+
+        scope.launch {
+            try {
+                val sessionData = Session(
+                    nama_materi = subjectName,
+                    waktu_masuk = meetingTime,
+                    divisi = selectedCategory,
+                    jenis_sesi = selectedMode,
+                    pertemuan = (meetingNumber.toIntOrNull() ?: 0),
+                    link_meet = if(selectedMode == "Online") meetingLink else null,
+                    ruangan = if (selectedMode == "Offline") meetingLocation else null
+                )
+
+                // Insert to Supabase
+                supabase.from("sesi").insert(sessionData)
+
+                withContext(Dispatchers.Main) {
+                    isLoading = false
+                    Toast.makeText(context, "Sesi berhasil ditambahkan", Toast.LENGTH_SHORT).show()
+                    onCreateSession()
+                    onNavigateBack()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    isLoading = false
+                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Log.d("AddSessionScreen", "Error: ${e.message}")
+                }
+            }
+        }
     }
 
     Box(
@@ -165,6 +229,7 @@ fun AddSessionScreen(
                         )
                     }
 
+                    // Waktu Masuk
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Waktu Masuk",
@@ -266,6 +331,7 @@ fun AddSessionScreen(
                     }
                 }
 
+                // Divider
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -282,19 +348,19 @@ fun AddSessionScreen(
                         text = "Offline",
                         isSelected = selectedMode == "Offline",
                         onClick = { selectedMode = "Offline" },
-                        primaryColor = my.kelompok3.akuhadir.ui.theme.PrimaryColor,
+                        primaryColor = PrimaryColor,
                         modifier = Modifier.weight(1f)
                     )
                     ModeChipSession(
                         text = "Online",
                         isSelected = selectedMode == "Online",
                         onClick = { selectedMode = "Online" },
-                        primaryColor = my.kelompok3.akuhadir.ui.theme.PrimaryColor,
+                        primaryColor = PrimaryColor,
                         modifier = Modifier.weight(1f)
                     )
                 }
 
-                // Link meet / Lokasi meet (berubah berdasarkan mode)
+                // Link meet / Lokasi meet
                 Column {
                     Text(
                         text = if (selectedMode == "Online") "Link meet" else "Lokasi meet",
@@ -329,19 +395,28 @@ fun AddSessionScreen(
 
                 // Buka Sesi Button
                 Button(
-                    onClick = onCreateSession,
+                    onClick = { insertSession()
+                              onNavigateBack()},
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = GreenColor),
-                    shape = RoundedCornerShape(15.dp)
+                    shape = RoundedCornerShape(15.dp),
+                    enabled = !isLoading
                 ) {
-                    Text(
-                        text = "Buka Sesi",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "Buka Sesi",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
@@ -360,8 +435,8 @@ fun ModeChipSession(
         onClick = onClick,
         modifier = modifier.height(40.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (isSelected) PrimaryColor else Color.White,
-            contentColor = if (isSelected) Color.White else PrimaryColor // Changed to Black for unselected state
+            containerColor = if (isSelected) primaryColor else Color.White,
+            contentColor = if (isSelected) Color.White else primaryColor
         ),
         shape = RoundedCornerShape(15.dp),
         border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, primaryColor) else null

@@ -22,39 +22,47 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 import my.kelompok3.akuhadir.ui.logika.useDelayState
-import my.kelompok3.akuhadir.ui.theme.*
-
 
 // database
 import my.kelompok3.akuhadir.data.model.SupabaseInstance
 import my.kelompok3.akuhadir.data.model.User
 
+// color
+import my.kelompok3.akuhadir.ui.theme.PrimaryColor
+import my.kelompok3.akuhadir.ui.theme.BackgroundColor
+
 import kotlinx.coroutines.Dispatchers
 import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
-
-//logika
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onNavigateToHome: () -> Unit
 ) {
+    // Definisi warna lokal untuk mengatasi unresolved reference
+    val primaryColor = Color(0xFF2196F3) // Biru Material
+    val backgroundColor = Color(0xFFF5F5F5) // Abu-abu terang
+    val blackColor = Color(0xFF2F2F2F) // Hitam
+    val grayColor = Color(0xFF9CA3AF) // Abu-abu
 
-    var fullName by remember { mutableStateOf("Muhammad Farhad Ajilla") }
-    var nim by remember { mutableStateOf("23552011063") }
-    var selectedDivision by remember { mutableStateOf("Hardware") }
+    // State variables untuk form inputs
+    var fullName by remember { mutableStateOf("") }
+    var nim by remember { mutableStateOf("") }
+    var selectedDivision by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
-    // database
-    val  supabase = SupabaseInstance.client
-    val context = LocalContext.current // Ambil context dari lingkungan Compose
-    // Panggil fungsi delay
+
+    // Database dan context
+    val supabase = SupabaseInstance.client
+    val context = LocalContext.current
+
+    // Delay state untuk button
     val (isRegisterEnabled, triggerRegisterDelay) = useDelayState(20_000)
-    val currentUserId = UserRegistrationManager.getCurrentUserId()
 
+    // Coroutine scope
+    val coroutineScope = rememberCoroutineScope()
 
+    // Daftar divisi
     val divisions = listOf("hardware", "software", "game")
-
-    println("User data: ID=$currentUserId")
 
     Box(
         modifier = Modifier
@@ -100,7 +108,7 @@ fun ProfileScreen(
                     text = "Sebelum Memulai",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Black
+                    color = blackColor
                 )
 
                 Spacer(modifier = Modifier.height(1.dp))
@@ -108,7 +116,7 @@ fun ProfileScreen(
                 Text(
                     text = "Masukkan identitas anda terlebih dahulu",
                     fontSize = 14.sp,
-                    color = Color.Gray
+                    color = grayColor
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -121,7 +129,7 @@ fun ProfileScreen(
                         text = "Nama Lengkap",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Black,
+                        color = blackColor,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     OutlinedTextField(
@@ -130,11 +138,12 @@ fun ProfileScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
                         singleLine = true,
+                        placeholder = { Text("Masukkan nama lengkap") },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White,
-                            focusedBorderColor = PrimaryColor,
-                            unfocusedBorderColor = Gray
+                            focusedBorderColor = primaryColor,
+                            unfocusedBorderColor = grayColor
                         )
                     )
                 }
@@ -149,7 +158,7 @@ fun ProfileScreen(
                         text = "NIM",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Black,
+                        color = blackColor,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     OutlinedTextField(
@@ -159,11 +168,12 @@ fun ProfileScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         shape = RoundedCornerShape(14.dp),
                         singleLine = true,
+                        placeholder = { Text("Masukkan NIM") },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White,
-                            focusedBorderColor = PrimaryColor,
-                            unfocusedBorderColor = Gray
+                            focusedBorderColor = primaryColor,
+                            unfocusedBorderColor = grayColor
                         )
                     )
                 }
@@ -178,7 +188,7 @@ fun ProfileScreen(
                         text = "Divisi",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Black,
+                        color = blackColor,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     ExposedDropdownMenuBox(
@@ -188,9 +198,9 @@ fun ProfileScreen(
                     ) {
                         OutlinedTextField(
                             value = selectedDivision,
-                            onValueChange = {selectedDivision=it.lowercase()},
-
+                            onValueChange = { },
                             readOnly = true,
+                            placeholder = { Text("Pilih divisi") },
                             trailingIcon = {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                             },
@@ -202,8 +212,8 @@ fun ProfileScreen(
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = Color.White,
                                 unfocusedContainerColor = Color.White,
-                                focusedBorderColor = PrimaryColor,
-                                unfocusedBorderColor = Gray
+                                focusedBorderColor = primaryColor,
+                                unfocusedBorderColor = grayColor
                             )
                         )
                         ExposedDropdownMenu(
@@ -212,7 +222,7 @@ fun ProfileScreen(
                         ) {
                             divisions.forEach { division ->
                                 DropdownMenuItem(
-                                    text = { Text(division) },
+                                    text = { Text(division.replaceFirstChar { it.uppercase() }) },
                                     onClick = {
                                         selectedDivision = division
                                         expanded = false
@@ -224,64 +234,90 @@ fun ProfileScreen(
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
-                val coroutineScope = rememberCoroutineScope()
-
 
                 // Submit Button
                 Button(
-                    onClick =
-                    {
+                    onClick = {
                         triggerRegisterDelay() // Mulai jeda tombol
                         coroutineScope.launch {
-                            if (nim != "" && fullName != "" && selectedDivision != "") {
-                                // Mengambil ID pengguna yang sudah disimpan saat registrasi
-                                val currentUserId = UserRegistrationManager.getCurrentUserId()
+                            // Validasi input tidak kosong
+                            if (nim.isNotEmpty() && fullName.isNotEmpty() && selectedDivision.isNotEmpty()) {
+                                try {
+                                    // Mengambil ID pengguna yang sudah disimpan saat registrasi
+                                    val currentUserId = UserRegistrationManager.getCurrentUserId()
 
-
-                                // Memeriksa apakah ID pengguna valid
-                                if (currentUserId != null) {
-                                    // Membuat objek UserProfile dengan ID pengguna
-                                    val userProfile = User(nama = fullName, nim = nim.toIntOrNull() ?: 0, divisi = selectedDivision, id_user = currentUserId)
-
-                                    // Memeriksa apakah pengguna sudah terdaftar di user_profile
-                                    val pengecekan = supabase.from("user_profile").select().decodeList<User>()
-                                    val existingUser = pengecekan.find { it.nim == userProfile.nim }
-
-                                    if (existingUser != null) {
-                                        Toast.makeText(context, "nim anda sama dengan yang sudah terdaftar", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        // Menyimpan data pengguna ke user_profile
-                                        val response = withContext(Dispatchers.IO) {
-                                            supabase.from("user_profile").insert(userProfile)
+                                    // Memeriksa apakah ID pengguna valid
+                                    if (currentUserId != null) {
+                                        // Validasi NIM harus berupa angka
+                                        val nimInt = nim.toIntOrNull()
+                                        if (nimInt == null) {
+                                            Toast.makeText(context, "NIM harus berupa angka", Toast.LENGTH_SHORT).show()
+                                            return@launch
                                         }
 
-                                        if (response.data != null) {
-                                            onNavigateToHome()
-                                            Toast.makeText(context, "Pengisian profile berhasil disimpan", Toast.LENGTH_SHORT).show()
+                                        // Validasi panjang NIM (opsional, sesuaikan dengan kebutuhan)
+                                        if (nim.length < 8) {
+                                            Toast.makeText(context, "NIM harus minimal 8 digit", Toast.LENGTH_SHORT).show()
+                                            return@launch
+                                        }
 
+                                        // Membuat objek UserProfile dengan ID pengguna
+                                        val userProfile = User(
+                                            nama = fullName.trim(),
+                                            nim = nimInt,
+                                            divisi = selectedDivision.lowercase(),
+                                            id_user = currentUserId
+                                        )
+
+                                        println("Data yang akan diinsert: $userProfile")
+
+                                        // Memeriksa apakah NIM sudah terdaftar di user_profile
+                                        val pengecekan = withContext(Dispatchers.IO) {
+                                            supabase.from("user_profile")
+                                                .select()
+                                                .decodeList<User>()
+                                        }
+
+                                        val existingUser = pengecekan.find { it.nim == userProfile.nim }
+
+                                        if (existingUser != null) {
+                                            Toast.makeText(context, "NIM sudah terdaftar, silakan gunakan NIM lain", Toast.LENGTH_SHORT).show()
                                         } else {
-                                            println("Kesalahan saat menyisipkan pengguna")
+                                            // Menyimpan data pengguna ke user_profile
+                                            val response = withContext(Dispatchers.IO) {
+                                                supabase.from("user_profile").insert(userProfile)
+                                            }
+
+                                            // Cek apakah insert berhasil
+                                            println("Insert response: $response")
+                                            Toast.makeText(context, "Profil berhasil disimpan", Toast.LENGTH_SHORT).show()
+                                            onNavigateToHome()
                                         }
+                                    } else {
+                                        println("ID pengguna tidak ditemukan")
+                                        Toast.makeText(context, "Kesalahan: ID pengguna tidak ditemukan", Toast.LENGTH_SHORT).show()
                                     }
-                                } else {
-                                    println("ID pengguna tidak ditemukan")
-                                    Toast.makeText(context, "Kesalahan: ID pengguna tidak ditemukan", Toast.LENGTH_SHORT).show()
+                                } catch (e: Exception) {
+                                    println("Error saat menyimpan profil: ${e.message}")
+                                    e.printStackTrace()
+                                    Toast.makeText(context, "Terjadi kesalahan saat menyimpan profil: ${e.message}", Toast.LENGTH_LONG).show()
                                 }
                             } else {
-                                println("Data belum di input")
-                                Toast.makeText(context, "Kolom belum di isi", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Semua kolom harus diisi", Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
-                    enabled = isRegisterEnabled, // Gunakan state hasil useDelayState
+                    enabled = isRegisterEnabled,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isRegisterEnabled) PrimaryColor else grayColor
+                    )
                 ) {
                     Text(
-                        text = "Masuk",
+                        text = if (isRegisterEnabled) "Masuk" else "Tunggu...",
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold
