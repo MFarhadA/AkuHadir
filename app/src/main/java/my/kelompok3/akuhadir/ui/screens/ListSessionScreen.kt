@@ -114,6 +114,7 @@ fun ListSessionScreen(
     }
 }
 
+//lalalala
 @Composable
 fun SessionListItem(
     session: SessionItem,

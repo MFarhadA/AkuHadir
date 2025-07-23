@@ -106,7 +106,7 @@ fun AddSessionScreen(
                     isLoading = false
                     Toast.makeText(context, "Sesi berhasil ditambahkan", Toast.LENGTH_SHORT).show()
                     onCreateSession()
-                    onNavigateBack()
+
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -396,7 +396,7 @@ fun AddSessionScreen(
                 // Buka Sesi Button
                 Button(
                     onClick = { insertSession()
-                              onNavigateBack()},
+                              },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),

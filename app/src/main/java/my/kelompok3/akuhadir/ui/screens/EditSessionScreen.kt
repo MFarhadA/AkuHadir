@@ -24,17 +24,34 @@ import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.buildJsonObject
+import my.kelompok3.akuhadir.data.model.SesiData
 import my.kelompok3.akuhadir.data.model.SupabaseInstance
-import my.kelompok3.akuhadir.ui.components.SesiData
 import my.kelompok3.akuhadir.ui.theme.*
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.put
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditSessionScreen(
-    sesiData: SesiData,
+//    sesiData: SesiData,
+    sesiDataJson: String,
     onNavigateBack: () -> Unit,
     onUpdateSession: () -> Unit
 ) {
+    // Ubah JSON kembali menjadi objek SesiData
+    val decodedSesiDataJson = remember(sesiDataJson) {
+        URLDecoder.decode(sesiDataJson, StandardCharsets.UTF_8.toString())
+    }
+    val sesiData = remember(decodedSesiDataJson) {
+        Json.decodeFromString<SesiData>(decodedSesiDataJson)
+    }
+
     var selectedCategory by remember { mutableStateOf(sesiData.divisi) }
     var subjectName by remember { mutableStateOf(sesiData.nama_materi ?: "") }
     var meetingNumber by remember { mutableStateOf(sesiData.pertemuan.toString()) }
@@ -85,7 +102,6 @@ fun EditSessionScreen(
         }
 
         isLoading = true
-
         scope.launch {
             try {
                 val updateData = mapOf(
@@ -99,8 +115,25 @@ fun EditSessionScreen(
                 )
 
                 // Update to Supabase
+                val jsonMap = mutableMapOf<String, JsonElement>()
                 supabase.from("sesi")
-                    .update(updateData) {
+                    .update(
+                        buildJsonObject {
+                            put("nama_materi", JsonPrimitive(subjectName))
+                            put("waktu_masuk", JsonPrimitive(meetingTime))
+                            put("divisi", JsonPrimitive(selectedCategory))
+                            put("jenis_sesi", JsonPrimitive(selectedMode))
+                            put("pertemuan", JsonPrimitive(meetingNumber.toIntOrNull() ?: 0))
+
+                            if (selectedMode == "Online") {
+                                put("link_meet", JsonPrimitive(meetingLink))
+                                put("ruangan", JsonNull)
+                            } else {
+                                put("ruangan", JsonPrimitive(meetingLocation))
+                                put("link_meet", JsonNull)
+                            }
+                        }
+                    ){
                         filter {
                             eq("id_sesi", sesiData.id_sesi)
                         }
@@ -110,7 +143,6 @@ fun EditSessionScreen(
                     isLoading = false
                     Toast.makeText(context, "Sesi berhasil diupdate", Toast.LENGTH_SHORT).show()
                     onUpdateSession()
-                    onNavigateBack()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {

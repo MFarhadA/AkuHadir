@@ -14,8 +14,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import my.kelompok3.akuhadir.data.model.SesiData
 import my.kelompok3.akuhadir.ui.screens.*
 import my.kelompok3.akuhadir.ui.theme.AkuHadirTheme
+import java.net.URLEncoder
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,7 +55,13 @@ fun AkuHadirApp() {
         composable("login") {
             LoginScreen(
                 onNavigateToRegister = { navController.navigate("register") },
-                onNavigateToHome = { navController.navigate("home") }
+                onNavigateToHome = { navController.navigate("home") {
+//                        Hapus semua halaman sampai ke 'login', termasuk 'login' itu sendiri
+                    popUpTo("login") {
+                        inclusive = true
+                    }
+                    }
+                }
             )
         }
         composable("register") {
@@ -74,6 +85,11 @@ fun AkuHadirApp() {
                 onNavigateToAddSession = { navController.navigate("add_session") },
                 onNavigateToListSessions = { navController.navigate("list_sessions") },
                 onNavigateToAttendance = { navController.navigate("attendance") },
+                onNavigateToEditSession = { sesiData: SesiData ->
+                    val sesiDataJson = Json.encodeToString(sesiData)
+                    val encodedJson = URLEncoder.encode(sesiDataJson, "UTF-8")
+                    navController.navigate("edit_session/$encodedJson")
+                }
             )
         }
         // Removed the duplicate "session_details" composable
@@ -112,6 +128,17 @@ fun AkuHadirApp() {
                 title = title,
                 meeting = meeting,
                 onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = "edit_session/{sesiDataJson}",
+            arguments = listOf(navArgument("sesiDataJson") { type = NavType.StringType})
+        ) { backStackEntry ->
+            val sesiDataJson = backStackEntry.arguments?.getString("sesiDataJson") ?: ""
+            EditSessionScreen(
+                sesiDataJson = sesiDataJson,
+                onNavigateBack = { navController.popBackStack() },
+                onUpdateSession = { navController.popBackStack() }
             )
         }
     }

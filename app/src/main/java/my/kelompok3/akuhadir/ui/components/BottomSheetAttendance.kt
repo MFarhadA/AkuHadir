@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material3.*
@@ -16,15 +15,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import my.kelompok3.akuhadir.ui.theme.*
+import androidx.compose.material3.Button
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 public fun AttendanceBottomSheet(
     onDismiss: () -> Unit,
-    onSubmitAttendance: () -> Unit
+    onSubmitAttendance: (status: String) -> Unit
 ) {
 
     var selectedStatus by remember { mutableStateOf("Hadir") }
+    val statuses = listOf("Hadir", "Izin", "Sakit")
 
     Surface(
         modifier = Modifier
@@ -189,7 +190,7 @@ public fun AttendanceBottomSheet(
 
             // Submit Button
             Button(
-                onClick = onSubmitAttendance,
+                onClick = { onSubmitAttendance(selectedStatus) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),

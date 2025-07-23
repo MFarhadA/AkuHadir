@@ -21,12 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,27 +31,20 @@ import my.kelompok3.akuhadir.data.model.StatusData
 import my.kelompok3.akuhadir.data.model.User
 import my.kelompok3.akuhadir.ui.theme.*
 import my.kelompok3.akuhadir.ui.components.AttendanceBottomSheet
-import my.kelompok3.akuhadir.ui.components.SessionAvailableCard
-import my.kelompok3.akuhadir.ui.components.SessionOwnerCard
-import my.kelompok3.akuhadir.ui.components.SessionOnlineCard
-import my.kelompok3.akuhadir.ui.components.SessionOnlineCard
 // untuk memamnggil databasenya
-import kotlinx.serialization.Serializable
 import my.kelompok3.akuhadir.data.model.SupabaseInstance
 
 import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
-import io.github.jan.supabase.postgrest.query.filter.FilterOperation
-import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
 import my.kelompok3.akuhadir.data.model.UserProfile
-import my.kelompok3.akuhadir.ui.components.SessionOfflineCard
 import my.kelompok3.akuhadir.data.manager.RoleManager
 import my.kelompok3.akuhadir.data.model.RoleData
 import my.kelompok3.akuhadir.data.model.RoleType
 import my.kelompok3.akuhadir.ui.components.SessionCardMember
 import my.kelompok3.akuhadir.ui.components.SessionSekretarisCard
+//ini baru
+import my.kelompok3.akuhadir.data.model.SesiData
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,12 +53,17 @@ fun HomeScreen(
     onNavigateToAddSession: () -> Unit,
     onNavigateToListSessions: () -> Unit,
     onNavigateToAttendance: () -> Unit,
+    onNavigateToEditSession: (SesiData) -> Unit
 ) {
     val roleManager = remember { RoleManager() }
     var currentUserRole by remember { mutableStateOf<RoleData?>(null) }
     var isLoadingRole by remember { mutableStateOf(false) }
     var roleError by remember { mutableStateOf<String?>(null) }
     var roleStatistics by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+
+    // State untuk menampung data sesi aktif yang akan diedit
+    var currentSession by remember { mutableStateOf<SesiData?>(null) }
+    var isLoadingScreen by remember { mutableStateOf(true) }
 
     // Memanggil koneksi ke database
     var connectionStatus by remember { mutableStateOf("Testing connection...") }
@@ -82,6 +76,9 @@ fun HomeScreen(
     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
     var isLoadingProfile by remember { mutableStateOf(false) }
     var profileError by remember { mutableStateOf<String?>(null) }
+    var refreshTriggeer by remember { mutableStateOf(false) }
+
+
 
     // Gunakan currentUserId dan currentUserEmail sesuai kebutuhan
     Text(text = "Welcome, $currentUserEmail! Your ID is $currentUserId")
@@ -191,6 +188,26 @@ fun HomeScreen(
         }
     }
 
+    // LaunchedEffect untuk mengambil sesi terbaru
+    LaunchedEffect(Unit) {
+        try {
+            val result = SupabaseInstance.client.from("sesi")
+                .select() {
+                    order("created_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
+                    limit(1)
+                }.decodeSingleOrNull<SesiData>()
+
+            currentSession = result
+            Log.d("HomeScreen", "Sesi terbaru yang diambil: $result")
+        } catch (e: Exception) {
+            Log.e("HomeScreen", "Gagal mengambil sesi terbaru: ${e.message}")
+        } finally {
+            isLoadingScreen = false
+        }
+    }
+
+
+
     // State untuk mengontrol visibility BottomSheet
     var showAttendanceBottomSheet by remember { mutableStateOf(false) }
 
@@ -204,7 +221,6 @@ fun HomeScreen(
 
     // Scroll state untuk konten yang dapat di-scroll
     val scrollState = rememberScrollState()
-
 
     Box(
         modifier = Modifier
@@ -390,7 +406,9 @@ fun HomeScreen(
                     }
                     RoleType.SEKRETARIS -> {
                         SessionSekretarisCard(
-                            onNavigateToAddSession = onNavigateToAddSession
+                            onNavigateToAddSession = onNavigateToAddSession,
+                            onEditSession = onNavigateToEditSession,
+                            refreshTrigger = refreshTriggeer
                         )
                     }
                     RoleType.ANGGOTA -> {
@@ -468,6 +486,10 @@ fun HomeScreen(
             // Extra space di bawah untuk memastikan semua konten bisa di-scroll
             Spacer(modifier = Modifier.height(20.dp))
         }
+
+
+
+
 
         // Floating Action Button - Sticky (tidak ikut scroll)
         FloatingActionButton(

@@ -104,9 +104,10 @@ dependencies {
 
     // Database
     implementation(platform("io.github.jan-tennert.supabase:bom:3.0.0"))
-    implementation("io.github.jan-tennert.supabase:postgrest-kt")
-    implementation("io.github.jan-tennert.supabase:auth-kt")
-    implementation("io.github.jan-tennert.supabase:realtime-kt")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:1.3.3")
+    implementation("io.github.jan-tennert.supabase:auth-kt:1.3.3")
+    implementation("io.github.jan-tennert.supabase:realtime-kt:1.3.3")
+
 
     // Ktor + Serialization
     implementation("io.ktor:ktor-client-content-negotiation:3.0.0")
@@ -125,4 +126,13 @@ dependencies {
     implementation ("org.mindrot:jbcrypt:0.4") // Tambahkan library bcrypt
     implementation("io.github.jan-tennert.supabase:postgrest-kt:VERSION")
 
+    // Ui Button
+    implementation("io.coil-kt:coil-compose:2.6.0")
 }
+
+
+//    implementation("androidx.compose.ui:ui")
+//    implementation("androidx.compose.ui:ui-graphics")
+//    implementation("androidx.compose.ui:ui-tooling-preview")
+//
+//    implementation("androidx.compose.material3:material3")
