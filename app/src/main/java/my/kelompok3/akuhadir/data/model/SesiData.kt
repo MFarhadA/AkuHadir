@@ -9,7 +9,7 @@ data class SesiData(
     val waktu_masuk: String,
     val divisi: String,
     val jenis_sesi: String,
-    val pertemuan: Int,
+    val pertemuan: String,
     val link_meet: String? = null,
     val ruangan: String? = null,
     val nama_materi: String? = null,

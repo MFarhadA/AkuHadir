@@ -8,7 +8,7 @@ data class User(
     val username: String = "",
     val password: String ="",
     val fullName: String = "",
-    val nim: Int = 0, // ubah dari String ke Int
+    val nim: String = "",
     val division: String = "",
     val nama: String = "",
     val divisi: String = "",

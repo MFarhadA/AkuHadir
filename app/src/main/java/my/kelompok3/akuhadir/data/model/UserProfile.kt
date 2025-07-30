@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 data class UserProfile(
     val id_user_profile: Int,
     val nama: String,
-    val nim: Int,
+    val nim: String,
     val divisi: String,
     val role: String,
     val id_user: Int
@@ -17,7 +17,7 @@ data class UserProfile(
 data class RoleData(
     val id_user_profile: Int,
     val nama: String,
-    val nim: Int,
+    val nim: String,
     val role: String,
     val id_user: Int
 )

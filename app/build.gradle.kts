@@ -124,7 +124,6 @@ dependencies {
 
     // Enkripsi
     implementation ("org.mindrot:jbcrypt:0.4") // Tambahkan library bcrypt
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:VERSION")
 
     // Ui Button
     implementation("io.coil-kt:coil-compose:2.6.0")

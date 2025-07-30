@@ -249,8 +249,7 @@ fun ProfileScreen(
                                     // Memeriksa apakah ID pengguna valid
                                     if (currentUserId != null) {
                                         // Validasi NIM harus berupa angka
-                                        val nimInt = nim.toIntOrNull()
-                                        if (nimInt == null) {
+                                        if (!nim.all { it.isDigit() }) {
                                             Toast.makeText(context, "NIM harus berupa angka", Toast.LENGTH_SHORT).show()
                                             return@launch
                                         }
@@ -264,7 +263,7 @@ fun ProfileScreen(
                                         // Membuat objek UserProfile dengan ID pengguna
                                         val userProfile = User(
                                             nama = fullName.trim(),
-                                            nim = nimInt,
+                                            nim = nim.trim(),
                                             divisi = selectedDivision.lowercase(),
                                             id_user = currentUserId
                                         )

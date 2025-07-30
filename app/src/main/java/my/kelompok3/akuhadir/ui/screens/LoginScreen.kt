@@ -53,7 +53,7 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
-    val  supabase = SupabaseInstance.client
+    val supabase = SupabaseInstance.client
     val context = LocalContext.current // Ambil context dari lingkungan Compose
     // Panggil fungsi delay
 
