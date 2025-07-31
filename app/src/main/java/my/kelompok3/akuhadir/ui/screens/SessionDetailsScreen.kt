@@ -27,6 +27,12 @@ import my.kelompok3.akuhadir.data.model.AttendeeItem
 import my.kelompok3.akuhadir.ui.theme.*
 
 import android.util.Log
+import android.widget.Toast
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
+import coil.compose.AsyncImage
 import io.github.jan.supabase.auth.providers.Facebook
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +57,10 @@ fun SessionDetailsScreen(
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedRole by remember { mutableStateOf("anggota") }
+
+    // State untuk menampilkan dialog Gambar
+    var showImageDialog by remember { mutableStateOf(false) }
+    var selectedImageUrl by remember { mutableStateOf<String?>(null) }
 
     val supabaseClient = SupabaseInstance.client
 
@@ -137,7 +147,7 @@ fun SessionDetailsScreen(
             "alpha" -> GrayColor
             else -> GrayColor
         }
-        AttendeeItem(user.nama, user.nim, status, statusColor)
+        AttendeeItem(user.nama, user.nim, status, statusColor, presensi?.image_path)
     }
 
     // Hitung total kehadiran untuk semua user di divisi ini
@@ -327,7 +337,16 @@ fun SessionDetailsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(attendees) { attendee ->
-                        AttendeeListItem(attendee = attendee)
+                        val context = LocalContext.current
+
+                        AttendeeListItem(attendee = attendee, onClick = {
+                            if (!attendee.imagePath.isNullOrBlank()) {
+                                selectedImageUrl = attendee.imagePath
+                                showImageDialog = true
+                            } else {
+                                Toast.makeText(context, "Tidak ada foto bukti", Toast.LENGTH_SHORT).show()
+                            }
+                        })
                     }
 
                     if (attendees.isEmpty() && !isLoading) {
@@ -378,6 +397,45 @@ fun SessionDetailsScreen(
                             .fillMaxWidth()
                             .padding(16.dp)
                     )
+                }
+            }
+        }
+    }
+    if (showImageDialog && selectedImageUrl != null) {
+        Dialog(onDismissRequest = { showImageDialog = false }) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White)
+            ) {
+                Box {
+                    AsyncImage(
+                        model = selectedImageUrl,
+                        contentDescription = "Presensi Image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 200.dp, max = 400.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+
+                    // Tombol Close (X) di kanan atas
+                    IconButton(
+                        onClick = { showImageDialog = false },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .background(RedColor.copy(alpha = 0.6f), CircleShape)
+                            .size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Tutup",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
         }
@@ -439,7 +497,8 @@ fun RoleSelector(
 
 @Composable
 fun AttendeeListItem(
-    attendee: AttendeeItem
+    attendee: AttendeeItem,
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -449,6 +508,7 @@ fun AttendeeListItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable { onClick() }
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically

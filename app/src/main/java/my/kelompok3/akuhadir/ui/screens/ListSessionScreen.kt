@@ -111,6 +111,7 @@ fun ListSessionScreen(
                             order("pertemuan", Order.DESCENDING)
                         }
                         .decodeList<SesiData>()
+                        .sortedByDescending { it.pertemuan.toIntOrNull() ?: 0 }
                 } else {
                     // If user is anggota, filter by division
                     userProfile?.divisi?.let { divisi ->
@@ -123,6 +124,7 @@ fun ListSessionScreen(
                                 order("pertemuan", Order.DESCENDING)
                             }
                             .decodeList<SesiData>()
+                            .sortedByDescending { it.pertemuan.toIntOrNull() ?: 0 }
                     } ?: emptyList()
                 }
 

@@ -35,7 +35,7 @@ fun SessionSekretarisCard(
     onNavigateToAddSession: () -> Unit,
     onEditSession: (SesiData) -> Unit = {},
     onViewParticipants: (SesiData) -> Unit = {},
-    refreshTrigger: Boolean = false // Tambahkan parameter refresh
+    refreshData: () -> Unit // Tambahkan parameter refresh
 ) {
     val supabase = SupabaseInstance.client
     val currentUserId = UserRegistrationManager.getCurrentUserId()
@@ -82,10 +82,9 @@ fun SessionSekretarisCard(
     fun closeSession(sesi: SesiData) {
         coroutineScope.launch {
             try {
-                // Method 1: Try updating with correct column name
                 supabase.from("sesi")
                     .update(
-                        mapOf("keterangan" to "selesai")
+                        mapOf("Keterangan" to "selesai")
                     ) {
                         filter {
                             eq("id_sesi", sesi.id_sesi)
@@ -95,47 +94,11 @@ fun SessionSekretarisCard(
                 // Remove from local list immediately for better UX
                 sesiList = sesiList.filter { it.id_sesi != sesi.id_sesi }
                 Log.d("SessionSekretarisCard", "Session ${sesi.id_sesi} closed successfully")
-
-            } catch (e: Exception) {
-                Log.e("SessionSekretarisCard", "Error closing session with 'keterangan': ${e.message}")
-
-                // Method 2: Try alternative approach if first method fails
-                try {
-                    // Try with different column name that might exist
-                    supabase.from("sesi")
-                        .update(
-                            mapOf("status" to "selesai")
-                        ) {
-                            filter {
-                                eq("id_sesi", sesi.id_sesi)
-                            }
-                        }
-
-                    sesiList = sesiList.filter { it.id_sesi != sesi.id_sesi }
-                    Log.d("SessionSekretarisCard", "Session ${sesi.id_sesi} closed with alternative method")
-
-                } catch (e2: Exception) {
-                    Log.e("SessionSekretarisCard", "Error with alternative method: ${e2.message}")
-
-                    // Method 3: If both fail, try to delete the record
-                    try {
-                        supabase.from("sesi")
-                            .delete {
-                                filter {
-                                    eq("id_sesi", sesi.id_sesi)
-                                }
-                            }
-
-                        sesiList = sesiList.filter { it.id_sesi != sesi.id_sesi }
-                        Log.d("SessionSekretarisCard", "Session ${sesi.id_sesi} deleted successfully")
-
-                    } catch (e3: Exception) {
-                        // If all methods fail, just remove from local list
-                        sesiList = sesiList.filter { it.id_sesi != sesi.id_sesi }
-                        error = "Sesi dihapus dari tampilan, namun mungkin masih ada di database"
-                        Log.e("SessionSekretarisCard", "All methods failed, removing from local list only: ${e3.message}")
-                    }
-                }
+                refreshData()
+            }
+            catch (e: Exception) {
+                error = "Error closing session: ${e.message}"
+                Log.e("SessionSekretarisCard", "Error closing session", e)
             }
         }
     }

@@ -76,7 +76,7 @@ fun HomeScreen(
     var userProfile by remember { mutableStateOf<UserProfile?>(null) }
     var isLoadingProfile by remember { mutableStateOf(false) }
     var profileError by remember { mutableStateOf<String?>(null) }
-    var refreshTrigger by remember { mutableStateOf(false) }
+    var refreshTrigger by remember { mutableStateOf(0) }
 
     var sessionsFromDb by remember { mutableStateOf<List<SesiData>>(emptyList()) }
     var isLoadingSessions by remember { mutableStateOf(true) }
@@ -183,8 +183,10 @@ fun HomeScreen(
                     SupabaseInstance.client.from("sesi")
                         .select {
                             order("pertemuan", Order.DESCENDING)
+                            limit(3)
                         }
                         .decodeList<SesiData>()
+                        .sortedByDescending { it.pertemuan.toIntOrNull() ?: 0 }
                 } else {
                     // If user is anggota, filter by division
                     userProfile?.divisi?.let { divisi ->
@@ -195,8 +197,10 @@ fun HomeScreen(
                                     ilike("divisi", divisi.lowercase())
                                 }
                                 order("pertemuan", Order.DESCENDING)
+                                limit(3)
                             }
                             .decodeList<SesiData>()
+                            .sortedByDescending { it.pertemuan.toIntOrNull() ?: 0 }
                     } ?: emptyList()
                 }
 
@@ -244,6 +248,10 @@ fun HomeScreen(
                 isLoadingRole = false
             }
         }
+    }
+
+    fun refreshData() {
+        refreshTrigger++
     }
 
     Box(
@@ -415,7 +423,7 @@ fun HomeScreen(
                             SessionSekretarisCard(
                                 onNavigateToAddSession = onNavigateToAddSession,
                                 onEditSession = onNavigateToEditSession,
-                                refreshTrigger = refreshTrigger
+                                refreshData = { refreshData() }
                             )
                         }
                         RoleType.ANGGOTA -> {
