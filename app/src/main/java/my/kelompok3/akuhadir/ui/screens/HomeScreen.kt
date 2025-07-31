@@ -54,7 +54,6 @@ fun HomeScreen(
     onNavigateToSessionDetails: (Int,String, String) -> Unit,
     onNavigateToAddSession: () -> Unit,
     onNavigateToListSessions: () -> Unit,
-    onNavigateToAttendance: () -> Unit,
     onNavigateToEditSession: (SesiData) -> Unit
 ) {
     val roleManager = remember { RoleManager() }
@@ -565,9 +564,9 @@ fun HomeScreen(
                 dragHandle = null
             ) {
                 AttendanceBottomSheet(
+                    userProfile = userProfile,
                     onDismiss = { showAttendanceBottomSheet = false },
                     onSubmitAttendance = {
-                        onNavigateToAttendance()
                         showAttendanceBottomSheet = false
                     }
                 )

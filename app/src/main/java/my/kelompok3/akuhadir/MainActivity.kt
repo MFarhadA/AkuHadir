@@ -84,7 +84,6 @@ fun AkuHadirApp() {
                 },
                 onNavigateToAddSession = { navController.navigate("add_session") },
                 onNavigateToListSessions = { navController.navigate("list_sessions") },
-                onNavigateToAttendance = { navController.navigate("attendance") },
                 onNavigateToEditSession = { sesiData: SesiData ->
                     val sesiDataJson = Json.encodeToString(sesiData)
                     val encodedJson = URLEncoder.encode(sesiDataJson, "UTF-8")

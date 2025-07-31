@@ -54,13 +54,16 @@ fun SessionSekretarisCard(
         try {
             val result = try {
                 supabase.from("sesi")
-                    .select()
+                    .select {
+                        filter {
+                            eq("Keterangan", "berjalan")
+                        }
+                    }
                     .decodeList<SesiData>()
-                    .filter { it.keterangan != "selesai" }
             } catch (e: Exception) {
                 Log.w("SessionSekretarisCard", "Error filtering by keterangan: ${e.message}")
                 supabase.from("sesi")
-                    .select()
+                    .select {}
                     .decodeList<SesiData>()
                     .filter { sesi ->
                         sesi.keterangan?.lowercase() != "selesai"

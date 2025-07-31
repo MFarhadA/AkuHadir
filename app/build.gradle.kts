@@ -75,8 +75,6 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.room.common.jvm)
 
-
-
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -84,6 +82,7 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.6")
 
@@ -104,10 +103,10 @@ dependencies {
 
     // Database
     implementation(platform("io.github.jan-tennert.supabase:bom:3.0.0"))
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:1.3.3")
-    implementation("io.github.jan-tennert.supabase:auth-kt:1.3.3")
-    implementation("io.github.jan-tennert.supabase:realtime-kt:1.3.3")
-
+    implementation("io.github.jan-tennert.supabase:postgrest-kt")
+    implementation("io.github.jan-tennert.supabase:auth-kt")
+    implementation("io.github.jan-tennert.supabase:realtime-kt")
+    implementation("io.github.jan-tennert.supabase:storage-kt")
 
     // Ktor + Serialization
     implementation("io.ktor:ktor-client-content-negotiation:3.0.0")
@@ -127,6 +126,8 @@ dependencies {
 
     // Ui Button
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    implementation("com.google.accompanist:accompanist-permissions:0.37.3")
 }
 
 

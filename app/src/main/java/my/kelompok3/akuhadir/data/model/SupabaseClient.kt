@@ -4,12 +4,12 @@ import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.realtime.Realtime
+import io.github.jan.supabase.storage.Storage
 import my.kelompok3.akuhadir.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import android.util.Log
-
 import io.github.jan.supabase.postgrest.postgrest
 
 object SupabaseInstance {
@@ -22,6 +22,7 @@ object SupabaseInstance {
             install(Postgrest)
             install(Auth)
             install(Realtime)
+            install(Storage)
         }
     }
 

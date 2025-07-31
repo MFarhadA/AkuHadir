@@ -82,22 +82,21 @@ fun SessionCardMember(
                 userDivision = userProfile.divisi
                 userName = userProfile.nama
 
-                Log.d("SessionCardMember", "User: ${userProfile.nama}, Division: ${userProfile.divisi}")
+                Log.d(
+                    "SessionCardMember",
+                    "User: ${userProfile.nama}, Division: ${userProfile.divisi}"
+                )
 
                 // Get sessions for user's division that are currently running
                 val sessionsList = supabase.from("sesi")
-                    .select()
-                    .decodeList<SessionData>()
-                    .filter { session ->
-                        val isDivisionMatch = session.divisi.equals(userProfile.divisi, ignoreCase = true)
-                        val isRunning = session.keterangan.equals("berjalan", ignoreCase = true)
-
-                        Log.d("SessionCardMember", "Session ${session.idSesi}: divisi=${session.divisi}, keterangan=${session.keterangan}, matches=$isDivisionMatch, running=$isRunning")
-
-                        isDivisionMatch && isRunning
+                    .select {
+                        filter {
+                            ilike("divisi", userProfile.divisi.lowercase())
+                            eq("Keterangan", "berjalan")
+                        }
                     }
+                    .decodeList<SessionData>()
                     .sortedByDescending { it.waktuMasuk }
-                    .take(1) // Limit to 1 most recent sessions
 
                 sessions = sessionsList
                 Log.d("SessionCardMember", "Found ${sessions.size} running sessions for division: ${userProfile.divisi}")

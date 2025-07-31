@@ -148,7 +148,7 @@ fun SessionDetailsScreen(
             else -> GrayColor
         }
         AttendeeItem(user.nama, user.nim, status, statusColor, presensi?.image_path)
-    }
+    }.sortedBy { it.name.lowercase() }
 
     // Hitung total kehadiran untuk semua user di divisi ini
     val allAttendeesInDivision = userProfiles.map { user ->
@@ -337,6 +337,7 @@ fun SessionDetailsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(attendees) { attendee ->
+                        // sort by name
                         val context = LocalContext.current
 
                         AttendeeListItem(attendee = attendee, onClick = {
