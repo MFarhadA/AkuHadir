@@ -142,9 +142,7 @@ fun SessionSekretarisCard(
 
     // Header
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 2.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -175,6 +173,8 @@ fun SessionSekretarisCard(
             )
         }
     }
+
+    Spacer(modifier = Modifier.height(16.dp))
 
     // Content
     when {
@@ -238,9 +238,7 @@ fun SessionSekretarisCard(
         // Update SessionOwnerCard usage untuk passing onEditSession
         else -> {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 sesiList.forEach { sesi ->

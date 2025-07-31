@@ -27,6 +27,8 @@ import my.kelompok3.akuhadir.ui.theme.*
 import kotlinx.coroutines.launch
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
+import my.kelompok3.akuhadir.data.manager.RoleManager
+import my.kelompok3.akuhadir.data.model.UserProfile
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -38,38 +40,105 @@ fun ListSessionScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-    // State untuk data dari database
+    // State for user profile
+    var userProfile by remember { mutableStateOf<UserProfile?>(null) }
+    var isLoadingProfile by remember { mutableStateOf(true) }
+    var profileError by remember { mutableStateOf<String?>(null) }
+
+    // State for sessions data
     var sessionsFromDb by remember { mutableStateOf<List<SesiData>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoadingSessions by remember { mutableStateOf(true) }
+    var sessionsError by remember { mutableStateOf<String?>(null) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
-    // Load sessions dari database
-    LaunchedEffect(refreshTrigger) {
+    // Load user profile
+    LaunchedEffect(Unit) {
         coroutineScope.launch {
             try {
-                isLoading = true
-                errorMessage = null
+                isLoadingProfile = true
+                profileError = null
 
-                val result = SupabaseInstance.client.from("sesi")
-                    .select {
-                        order("pertemuan", Order.DESCENDING)
-                    }
-                    .decodeList<SesiData>()
+                val currentUserId = UserRegistrationManager.getCurrentUserId()
+                if (currentUserId != null) {
+                    val result = SupabaseInstance.client.from("user_profile")
+                        .select {
+                            filter {
+                                eq("id_user", currentUserId)
+                            }
+                        }
+                        .decodeSingle<UserProfile>()
+
+                    userProfile = result
+                    Log.d("ListSessionScreen", "User Profile loaded: ${userProfile?.nama}, Divisi: ${userProfile?.divisi}")
+                }
+            } catch (e: Exception) {
+                profileError = "Error loading profile: ${e.message}"
+                Log.e("ListSessionScreen", "Profile error: ${e.message}", e)
+            } finally {
+                isLoadingProfile = false
+            }
+        }
+    }
+
+    // Load sessions based on user's role and division
+    LaunchedEffect(userProfile, refreshTrigger) {
+        coroutineScope.launch {
+            try {
+                isLoadingSessions = true
+                sessionsError = null
+
+                // Get current user ID
+                val currentUserId = UserRegistrationManager.getCurrentUserId()
+                if (currentUserId == null) {
+                    sessionsError = "User ID tidak ditemukan"
+                    isLoadingSessions = false
+                    return@launch
+                }
+
+                // Create role manager instance
+                val roleManager = RoleManager()
+
+                // Check user role
+                val userRole = roleManager.getUserRoleByUserId(currentUserId)
+                val isSekretaris = userRole?.let { roleManager.isSekretaris(currentUserId) } ?: false
+
+                // Query sessions based on role
+                val result = if (isSekretaris) {
+                    // If user is sekretaris, show all sessions
+                    Log.d("ListSessionScreen", "User is sekretaris, showing all sessions")
+                    SupabaseInstance.client.from("sesi")
+                        .select {
+                            order("pertemuan", Order.DESCENDING)
+                        }
+                        .decodeList<SesiData>()
+                } else {
+                    // If user is anggota, filter by division
+                    userProfile?.divisi?.let { divisi ->
+                        Log.d("ListSessionScreen", "User is anggota, filtering by divisi: $divisi")
+                        SupabaseInstance.client.from("sesi")
+                            .select {
+                                filter {
+                                    ilike("divisi", divisi.lowercase())
+                                }
+                                order("pertemuan", Order.DESCENDING)
+                            }
+                            .decodeList<SesiData>()
+                    } ?: emptyList()
+                }
 
                 sessionsFromDb = result ?: emptyList()
                 Log.d("ListSessionScreen", "Loaded ${sessionsFromDb.size} sessions")
 
             } catch (e: Exception) {
-                errorMessage = "Gagal memuat sesi: ${e.message}"
+                sessionsError = "Gagal memuat sesi: ${e.message}"
                 Log.e("ListSessionScreen", "Error loading sessions: ${e.message}", e)
             } finally {
-                isLoading = false
+                isLoadingSessions = false
             }
         }
     }
 
-    // Function untuk refresh data
+    // Function to refresh data
     fun refreshData() {
         refreshTrigger++
     }
@@ -148,7 +217,7 @@ fun ListSessionScreen(
                     .padding(horizontal = 14.dp)
             ) {
                 when {
-                    isLoading -> {
+                    isLoadingProfile || isLoadingSessions -> {
                         // Loading state
                         Column(
                             modifier = Modifier.fillMaxSize(),
@@ -168,8 +237,8 @@ fun ListSessionScreen(
                         }
                     }
 
-                    errorMessage != null -> {
-                        // Error state
+                    profileError != null -> {
+                        // Profile error state
                         Column(
                             modifier = Modifier.fillMaxSize(),
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -181,7 +250,35 @@ fun ListSessionScreen(
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = errorMessage ?: "Terjadi kesalahan",
+                                text = profileError ?: "Terjadi kesalahan saat memuat profil",
+                                color = Color.Red,
+                                fontSize = 14.sp,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(
+                                onClick = { refreshData() },
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)
+                            ) {
+                                Text("Coba Lagi")
+                            }
+                        }
+                    }
+
+                    sessionsError != null -> {
+                        // Sessions error state
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "❌",
+                                fontSize = 48.sp
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = sessionsError ?: "Terjadi kesalahan saat memuat sesi",
                                 color = Color.Red,
                                 fontSize = 14.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -224,34 +321,44 @@ fun ListSessionScreen(
                     }
 
                     else -> {
-                        // Success state dengan data
+                        // Success state with data
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            // Header info
+                            // Header info with division
                             item {
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(containerColor = Color.White),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(16.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                    Column(
+                                        modifier = Modifier.padding(16.dp)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.DateRange,
-                                            contentDescription = null,
-                                            tint = PrimaryColor,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.DateRange,
+                                                contentDescription = null,
+                                                tint = PrimaryColor,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "Total ${sessionsFromDb.size} sesi ditemukan",
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color.Black
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            text = "Total ${sessionsFromDb.size} sesi ditemukan",
-                                            fontSize = 14.sp,
+                                            text = "Divisi: ${userProfile?.divisi ?: "Tidak diketahui"}",
+                                            fontSize = 12.sp,
                                             fontWeight = FontWeight.Medium,
-                                            color = Color.Black
+                                            color = Color.Gray
                                         )
                                     }
                                 }
@@ -278,6 +385,16 @@ fun SessionListItemFromDb(
     sesi: SesiData,
     onNavigateToSessionDetails: (String, String) -> Unit
 ) {
+
+    // Tentukan warna box berdasarkan jenis divisi
+    val divisiColor = when (sesi.divisi?.lowercase()) {
+        "hardware" -> GreenColor
+        "software" -> PrimaryColor
+        "game" -> RedColor
+        "alpha" -> GrayColor
+        else -> GrayColor
+    }
+
     // Tentukan warna status berdasarkan jenis sesi
     val statusColor = when (sesi.jenis_sesi?.lowercase()) {
         "hadir" -> GreenColor
@@ -300,7 +417,6 @@ fun SessionListItemFromDb(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(15.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
@@ -317,7 +433,7 @@ fun SessionListItemFromDb(
                     modifier = Modifier
                         .width(10.dp)
                         .height(32.dp)
-                        .background(statusColor, RoundedCornerShape(15.dp))
+                        .background(divisiColor, RoundedCornerShape(15.dp))
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(

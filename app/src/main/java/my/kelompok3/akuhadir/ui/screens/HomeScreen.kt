@@ -95,7 +95,7 @@ fun HomeScreen(
         coroutineScope.launch {
             try {
                 Log.d("HomeScreen", "Starting connection test from HomeScreen")
-                println("HomeScreen: Welcome, $currentUserEmail! Your ID is $currentUserId")
+                println("HomeScreen: Welcome, $currentUserEmail! Your ID is $currentUserId and your role is ${currentUserRole?.role}")
 
                 val isConnected = SupabaseInstance.testConnection()
                 connectionStatus = if (isConnected) {
@@ -143,7 +143,7 @@ fun HomeScreen(
                         .decodeSingle<UserProfile>()
 
                     userProfile = result
-                    Log.d("HomeScreen", "User Profile: ${userProfile?.nama}, NIM: ${userProfile?.nim}")
+                    Log.d("HomeScreen", "User Profile: ${userProfile?.nama}, NIM: ${userProfile?.nim} Role: ${userProfile?.role} Divisi: ${userProfile?.divisi}")
                 }
             } catch (e: Exception) {
                 profileError = "Error loading profile: ${e.message}"
@@ -155,24 +155,57 @@ fun HomeScreen(
     }
 
     // Load sessions
-    LaunchedEffect(Unit) {
+    LaunchedEffect(userProfile, refreshTrigger) {
         coroutineScope.launch {
             try {
                 isLoadingSessions = true
                 sessionsError = null
 
-                val result = SupabaseInstance.client.from("sesi")
-                    .select {
-                        order("pertemuan", Order.DESCENDING)  // Benar: order dipanggil dalam block select
-                        limit(3)
-                    }
-                    .decodeList<SesiData>()
+                // Get current user ID
+                val currentUserId = UserRegistrationManager.getCurrentUserId()
+                if (currentUserId == null) {
+                    sessionsError = "User ID tidak ditemukan"
+                    isLoadingSessions = false
+                    return@launch
+                }
+
+                // Create role manager instance
+                val roleManager = RoleManager()
+
+                // Check user role
+                val userRole = roleManager.getUserRoleByUserId(currentUserId)
+                val isSekretaris = userRole?.let { roleManager.isSekretaris(currentUserId) } ?: false
+
+                // Query sessions based on role
+                val result = if (isSekretaris) {
+                    // If user is sekretaris, show all sessions
+                    Log.d("ListSessionScreen", "User is sekretaris, showing all sessions")
+                    SupabaseInstance.client.from("sesi")
+                        .select {
+                            order("pertemuan", Order.DESCENDING)
+                        }
+                        .decodeList<SesiData>()
+                } else {
+                    // If user is anggota, filter by division
+                    userProfile?.divisi?.let { divisi ->
+                        Log.d("ListSessionScreen", "User is anggota, filtering by divisi: $divisi")
+                        SupabaseInstance.client.from("sesi")
+                            .select {
+                                filter {
+                                    ilike("divisi", divisi.lowercase())
+                                }
+                                order("pertemuan", Order.DESCENDING)
+                            }
+                            .decodeList<SesiData>()
+                    } ?: emptyList()
+                }
 
                 sessionsFromDb = result ?: emptyList()
-                Log.d("HomeScreen", "Sesi dari DB: $sessionsFromDb")
+                Log.d("ListSessionScreen", "Loaded ${sessionsFromDb.size} sessions")
+
             } catch (e: Exception) {
                 sessionsError = "Gagal memuat sesi: ${e.message}"
-                Log.e("HomeScreen", "Error loading sessions: ${e.message}", e)
+                Log.e("ListSessionScreen", "Error loading sessions: ${e.message}", e)
             } finally {
                 isLoadingSessions = false
             }
@@ -209,26 +242,6 @@ fun HomeScreen(
                 Log.e("HomeScreen", "Error loading user role: ${e.message}", e)
             } finally {
                 isLoadingRole = false
-            }
-        }
-    }
-
-    // Load latest session
-    LaunchedEffect(Unit) {
-        coroutineScope.launch {
-            try {
-                val result = SupabaseInstance.client.from("sesi")
-                    .select {
-                        order("created_at", Order.DESCENDING)
-                        limit(1)
-                    }.decodeSingleOrNull<SesiData>()
-
-                currentSession = result
-                Log.d("HomeScreen", "Sesi terbaru yang diambil: $result")
-            } catch (e: Exception) {
-                Log.e("HomeScreen", "Gagal mengambil sesi terbaru: ${e.message}")
-            } finally {
-                isLoadingScreen = false
             }
         }
     }
@@ -469,6 +482,17 @@ fun HomeScreen(
                 )
             } else {
                 sessionsFromDb.forEach { sesi ->
+
+                    // Tentukan warna box berdasarkan jenis divisi
+                    val divisiColor = when (sesi.divisi?.lowercase()) {
+                        "hardware" -> GreenColor
+                        "software" -> PrimaryColor
+                        "game" -> RedColor
+                        "alpha" -> GrayColor
+                        else -> GrayColor
+                    }
+
+                    // Tentukan warna status berdasarkan jenis sesi
                     val statusColor = when (sesi.jenis_sesi?.lowercase()) {
                         "hadir" -> GreenColor
                         "izin" -> PrimaryColor
@@ -479,6 +503,7 @@ fun HomeScreen(
                     SessionItemCard(
                         title = sesi.nama_materi ?: "Sesi tanpa nama",
                         meeting = "pertemuan ${sesi.pertemuan ?: "-"}",
+                        jenisSesi = divisiColor,
                         status = sesi.jenis_sesi?.let { it to statusColor } ?: ("-" to GrayColor),
                         onNavigateToSessionDetails = onNavigateToSessionDetails,
                     )
@@ -633,6 +658,7 @@ fun PieChartWithCenter(
 fun SessionItemCard(
     title: String,
     meeting: String,
+    jenisSesi: Color,
     status: Pair<String, Color>,
     onNavigateToSessionDetails: (String, String) -> Unit
 ) {
@@ -657,7 +683,7 @@ fun SessionItemCard(
                     modifier = Modifier
                         .width(10.dp)
                         .height(32.dp)
-                        .background(RedColor, RoundedCornerShape(15.dp))
+                        .background(jenisSesi, RoundedCornerShape(15.dp))
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
