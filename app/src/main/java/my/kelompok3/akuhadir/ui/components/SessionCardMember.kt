@@ -97,7 +97,7 @@ fun SessionCardMember(
                         isDivisionMatch && isRunning
                     }
                     .sortedByDescending { it.waktuMasuk }
-                    .take(1) // Limit to 5 most recent sessions
+                    .take(1) // Limit to 1 most recent sessions
 
                 sessions = sessionsList
                 Log.d("SessionCardMember", "Found ${sessions.size} running sessions for division: ${userProfile.divisi}")

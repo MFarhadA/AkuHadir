@@ -51,7 +51,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToSessionDetails: (String, String) -> Unit,
+    onNavigateToSessionDetails: (Int,String, String) -> Unit,
     onNavigateToAddSession: () -> Unit,
     onNavigateToListSessions: () -> Unit,
     onNavigateToAttendance: () -> Unit,
@@ -485,8 +485,8 @@ fun HomeScreen(
 
                     // Tentukan warna box berdasarkan jenis divisi
                     val divisiColor = when (sesi.divisi?.lowercase()) {
-                        "hardware" -> GreenColor
-                        "software" -> PrimaryColor
+                        "software" -> GreenColor
+                        "hardware" -> PrimaryColor
                         "game" -> RedColor
                         "alpha" -> GrayColor
                         else -> GrayColor
@@ -501,6 +501,7 @@ fun HomeScreen(
                     }
 
                     SessionItemCard(
+                        id_sesi = sesi.id_sesi ?: 0,
                         title = sesi.nama_materi ?: "Sesi tanpa nama",
                         meeting = "pertemuan ${sesi.pertemuan ?: "-"}",
                         jenisSesi = divisiColor,
@@ -656,14 +657,15 @@ fun PieChartWithCenter(
 
 @Composable
 fun SessionItemCard(
+    id_sesi: Int,
     title: String,
     meeting: String,
     jenisSesi: Color,
     status: Pair<String, Color>,
-    onNavigateToSessionDetails: (String, String) -> Unit
+    onNavigateToSessionDetails: (Int, String, String) -> Unit
 ) {
     Card(
-        onClick = { onNavigateToSessionDetails(title, meeting) },
+        onClick = { onNavigateToSessionDetails(id_sesi, title, meeting) },
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(15.dp)

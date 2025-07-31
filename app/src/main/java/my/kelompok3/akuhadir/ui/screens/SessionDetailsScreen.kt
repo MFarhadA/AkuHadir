@@ -26,165 +26,369 @@ import androidx.compose.ui.unit.sp
 import my.kelompok3.akuhadir.data.model.AttendeeItem
 import my.kelompok3.akuhadir.ui.theme.*
 
+import android.util.Log
+import io.github.jan.supabase.auth.providers.Facebook
+import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import my.kelompok3.akuhadir.data.model.Presensi
+import my.kelompok3.akuhadir.data.model.SesiData
+import my.kelompok3.akuhadir.data.model.SupabaseInstance
+import my.kelompok3.akuhadir.data.model.UserProfile
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionDetailsScreen(
+    id: Int,
     title: String,
     meeting: String,
     onNavigateBack: () -> Unit
 ) {
+    // State untuk menyimpan data dari database
+    var sesiData by remember { mutableStateOf<SesiData?>(null) }
+    var userProfiles by remember { mutableStateOf<List<UserProfile>>(emptyList()) }
+    var presensiData by remember { mutableStateOf<List<Presensi>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var selectedRole by remember { mutableStateOf("anggota") }
 
-    val attendees = listOf(
-        AttendeeItem("Prabowo Subianto", "2355201063", "Hadir", GreenColor),
-        AttendeeItem("Prabowo Subianto", "2355201063", "Izin", PrimaryColor),
-        AttendeeItem("Prabowo Subianto", "2355201063", "Alpha", GrayColor),
-        AttendeeItem("Prabowo Subianto", "2355201063", "Hadir", GreenColor),
-        AttendeeItem("Prabowo Subianto", "2355201063", "Hadir", GreenColor),
-        AttendeeItem("Prabowo Subianto", "2355201063", "Hadir", GreenColor),
-        AttendeeItem("Prabowo Subianto", "2355201063", "Sakit", RedColor),
-        AttendeeItem("Prabowo Subianto", "2355201063", "Hadir", GreenColor)
-    )
+    val supabaseClient = SupabaseInstance.client
+
+    // LaunchedEffect untuk memuat data saat screen pertama kali ditampilkan
+    LaunchedEffect(id) {
+        try {
+            isLoading = true
+            error = null
+
+            withContext(Dispatchers.IO) {
+                val sesi = supabaseClient.from("sesi")
+                    .select {
+                        filter {
+                            eq("id_sesi", id)
+                        }
+                    }
+                    .decodeSingle<SesiData>()
+
+                sesiData = sesi
+
+                val profiles = supabaseClient.from("user_profile")
+                    .select {
+                        filter {
+                            ilike("divisi", sesi.divisi.lowercase())
+                        }
+                    }
+                    .decodeList<UserProfile>()
+
+                userProfiles = profiles
+
+                val presensi = supabaseClient.from("presensi")
+                    .select {
+                        filter {
+                            eq("id_sesi", id)
+                        }
+                    }
+                    .decodeList<Presensi>()
+
+                presensiData = presensi
+
+                Log.d("SessionDetailsScreen", "Data loaded successfully")
+                Log.d("SessionDetailsScreen", "Sesi data: $sesi")
+                Log.d("SessionDetailsScreen", "User profiles: $profiles")
+                Log.d("SessionDetailsScreen", "Presensi data: $presensi")
+            }
+        } catch (e: Exception) {
+            error = "Error loading data: ${e.message}"
+            Log.e("SessionDetailsScreen", "Error loading data", e)
+        } finally {
+            isLoading = false
+        }
+    }
+
+
+    // Warna icon buku berdasarkan divisi
+    val bookColor = when (sesiData?.divisi) {
+        "Software" -> GreenColor
+        "Game" -> RedColor
+        "Hardware" -> PrimaryColor
+        else -> PrimaryColor
+    }
+
+    Log.d("Warna Buku", "Divisi: ${sesiData?.divisi}, Warna buku: $bookColor")
+
+    // Filter berdasarkan role yang dipilih
+    val displayedUsers = if (selectedRole.equals("pengurus", ignoreCase = true)) {
+        userProfiles.filter {
+            it.role.equals("pengurus", ignoreCase = true) || it.role.equals("sekretaris", ignoreCase = true)
+        }
+    } else {
+        userProfiles.filter {
+            it.role.equals(selectedRole, ignoreCase = true)
+        }
+    }
+
+    // Buat AttendeeItem dari data yang difilter
+    val attendees = displayedUsers.map { user ->
+        val presensi = presensiData.find { it.id_user_profile == user.id_user_profile }
+        val status = presensi?.kehadiran ?: "Alpha"
+        val statusColor = when (status.lowercase()) {
+            "hadir" -> GreenColor
+            "izin" -> PrimaryColor
+            "sakit" -> RedColor
+            "alpha" -> GrayColor
+            else -> GrayColor
+        }
+        AttendeeItem(user.nama, user.nim, status, statusColor)
+    }
+
+    // Hitung total kehadiran untuk semua user di divisi ini
+    val allAttendeesInDivision = userProfiles.map { user ->
+        val presensi = presensiData.find { it.id_user_profile == user.id_user_profile }
+        presensi?.kehadiran ?: "Alpha"
+    }
+
+    val hadirCount = allAttendeesInDivision.count { it.equals("Hadir", ignoreCase = true) }
+    val izinCount = allAttendeesInDivision.count { it.equals("Izin", ignoreCase = true) }
+    val sakitCount = allAttendeesInDivision.count { it.equals("Sakit", ignoreCase = true) }
+    val alphaCount = allAttendeesInDivision.count { it.equals("Alpha", ignoreCase = true) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundColor)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // Header
+        if (isLoading) {
+            // Loading indicator
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .padding(horizontal = 10.dp)
-                    .background(
-                        color = PrimaryColor,
-                        shape = RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp)
-                    ),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .padding(top = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    IconButton(
-                        onClick = onNavigateBack,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowCircleLeft,
-                            contentDescription = "Back",
-                            modifier = Modifier.size(30.dp),
-                            tint = Color.White
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    CircularProgressIndicator(color = PrimaryColor)
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Detail Sesi",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold
+                        text = "Memuat data sesi...",
+                        color = Color.Gray,
+                        fontSize = 14.sp
                     )
                 }
             }
-
-            // Session Details
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 10.dp)
-                    .padding(horizontal = 30.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(15.dp)
+        } else if (error != null) {
+            // Error state
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                Row(
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Terjadi kesalahan",
+                        color = RedColor,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = error!!,
+                        color = Color.Gray,
+                        fontSize = 12.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            // Reset states dan muat ulang data
+                            isLoading = true
+                            error = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)
+                    ) {
+                        Text("Coba Lagi", color = Color.White)
+                    }
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Header
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .height(80.dp)
+                        .padding(horizontal = 10.dp)
+                        .background(
+                            color = PrimaryColor,
+                            shape = RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp)
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .padding(top = 14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Book,
-                            contentDescription = "Person",
-                            modifier = Modifier.size(40.dp),
-                            tint = RedColor
+                        IconButton(
+                            onClick = onNavigateBack,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowCircleLeft,
+                                contentDescription = "Back",
+                                modifier = Modifier.size(30.dp),
+                                tint = Color.White
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Detail Sesi${sesiData?.let { " - ${it.divisi}" } ?: ""}",
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = title,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.Black,
-                                lineHeight = 16.sp
-                            )
-                            Text(
-                                text = meeting,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Gray,
-                                lineHeight = 14.sp
-                            )
+                    }
+                }
+
+                // Session Details
+                sesiData?.let { sesi ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 10.dp)
+                            .padding(horizontal = 30.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(15.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Book,
+                                    contentDescription = "Session",
+                                    modifier = Modifier.size(40.dp),
+                                    tint = bookColor
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = "${sesi.nama_materi}",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.Black,
+                                        lineHeight = 16.sp
+                                    )
+                                    Text(
+                                        text = "Pertemuan ${sesi.pertemuan}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color.Gray,
+                                        lineHeight = 14.sp
+                                    )
+                                    Text(
+                                        text = "${sesi.jenis_sesi} - ${sesi.waktu_masuk}",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Normal,
+                                        color = Color.Gray,
+                                        lineHeight = 12.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Role Selector (Anggota/Pengurus)
+                RoleSelector(
+                    selectedRole = selectedRole,
+                    onRoleSelected = { selectedRole = it }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Attendees List
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 6.dp)
+                        .padding(horizontal = 30.dp)
+                        .padding(bottom = 120.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(attendees) { attendee ->
+                        AttendeeListItem(attendee = attendee)
+                    }
+
+                    if (attendees.isEmpty() && !isLoading) {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Tidak ada $selectedRole di divisi ${sesiData?.divisi ?: ""}",
+                                        fontSize = 14.sp,
+                                        color = Color.Gray,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            // Attendees Type (Anggota/Pengurus)
-            AttendeeTypeSelector()
-
-            // Attendees List
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 6.dp)
-                    .padding(horizontal = 30.dp)
-                    .padding(bottom = 120.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(attendees) { attendee ->
-                    AttendeeListItem(attendee = attendee)
+            // Floating AttendanceBarWithLegend dengan total kehadiran divisi
+            if (sesiData != null) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 30.dp)
+                        .padding(bottom = 20.dp)
+                        .align(Alignment.BottomCenter),
+                    shape = RoundedCornerShape(15.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    AttendanceBarWithLegend(
+                        hadirCount = hadirCount,
+                        izinCount = izinCount,
+                        alphaCount = alphaCount,
+                        sakitCount = sakitCount,
+                        divisi = sesiData!!.divisi,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    )
                 }
             }
-        }
-
-        // Floating AttendanceBarWithLegend dengan Card dan shadow
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 30.dp)
-                .padding(bottom = 20.dp)
-                .align(Alignment.BottomCenter),
-            shape = RoundedCornerShape(15.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            AttendanceBarWithLegend(
-                hadirCount = attendees.count { it.status.equals("Hadir", ignoreCase = true) },
-                izinCount = attendees.count { it.status.equals("Izin", ignoreCase = true) },
-                alphaCount = attendees.count { it.status.equals("Alpha", ignoreCase = true) },
-                sakitCount = attendees.count { it.status.equals("Sakit", ignoreCase = true) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            )
         }
     }
 }
 
 @Composable
-fun AttendeeTypeSelector() {
-    var selectedType by remember { mutableStateOf("Anggota") }
-
+fun RoleSelector(
+    selectedRole: String,
+    onRoleSelected: (String) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -192,20 +396,20 @@ fun AttendeeTypeSelector() {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val types = listOf("Anggota", "Pengurus")
+        val roles = listOf("anggota", "pengurus")
 
-        types.forEachIndexed { index, type ->
-            val isSelected = selectedType == type
+        roles.forEachIndexed { index, role ->
+            val isSelected = selectedRole == role
             val buttonModifier = Modifier
                 .weight(1f)
                 .padding(
                     start = if (index > 0) 4.dp else 0.dp,
-                    end = if (index < types.size - 1) 4.dp else 0.dp
+                    end = if (index < roles.size - 1) 4.dp else 0.dp
                 )
 
             if (isSelected) {
                 Button(
-                    onClick = { selectedType = type },
+                    onClick = { onRoleSelected(role) },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = PrimaryColor,
                         contentColor = Color.White
@@ -213,19 +417,20 @@ fun AttendeeTypeSelector() {
                     shape = RoundedCornerShape(12.dp),
                     modifier = buttonModifier
                 ) {
-                    Text(text = type, fontWeight = FontWeight.Bold)
+                    Text(text = role, fontWeight = FontWeight.Bold)
                 }
             } else {
                 Button(
-                    onClick = { selectedType = type },
+                    onClick = { onRoleSelected(role) },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color.White,
                         contentColor = PrimaryColor
                     ),
                     shape = RoundedCornerShape(12.dp),
-                    modifier = buttonModifier
+                    modifier = buttonModifier,
+                    border = BorderStroke(1.dp, PrimaryColor)
                 ) {
-                    Text(text = type, fontWeight = FontWeight.Bold)
+                    Text(text = role, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -305,6 +510,7 @@ fun AttendanceBarWithLegend(
     izinCount: Int,
     alphaCount: Int,
     sakitCount: Int,
+    divisi: String,
     modifier: Modifier = Modifier,
     height: Dp = 20.dp,
     cornerRadius: Dp = 10.dp
@@ -317,6 +523,15 @@ fun AttendanceBarWithLegend(
     val sakitPercent = sakitCount / total.toFloat()
 
     Column(modifier = modifier) {
+        // Title
+        Text(
+            text = "Rekap Kehadiran Divisi $divisi",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.Black,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
         // Bar horizontal
         Row(
             modifier = Modifier
@@ -372,8 +587,16 @@ fun AttendanceBarWithLegend(
             LegendItem(color = RedColor, label = "Sakit", count = sakitCount)
             LegendItem(color = GrayColor, label = "Alpha", count = alphaCount)
         }
-    }
 
+        // Total
+        Text(
+            text = "Total: $total anggota",
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.Gray,
+            modifier = Modifier.padding(top = 8.dp, start = 14.dp)
+        )
+    }
 }
 
 @Composable

@@ -36,7 +36,7 @@ import java.util.*
 @Composable
 fun ListSessionScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToSessionDetails: (String, String) -> Unit
+    onNavigateToSessionDetails: (Int, String, String) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -383,13 +383,13 @@ fun ListSessionScreen(
 @Composable
 fun SessionListItemFromDb(
     sesi: SesiData,
-    onNavigateToSessionDetails: (String, String) -> Unit
+    onNavigateToSessionDetails: (Int, String, String) -> Unit
 ) {
 
     // Tentukan warna box berdasarkan jenis divisi
     val divisiColor = when (sesi.divisi?.lowercase()) {
-        "hardware" -> GreenColor
-        "software" -> PrimaryColor
+        "software" -> GreenColor
+        "hardware" -> PrimaryColor
         "game" -> RedColor
         "alpha" -> GrayColor
         else -> GrayColor
@@ -410,6 +410,7 @@ fun SessionListItemFromDb(
     Card(
         onClick = {
             onNavigateToSessionDetails(
+                sesi.id_sesi ?: 0,
                 sesi.nama_materi ?: "Sesi tanpa nama",
                 sesi.pertemuan ?: "-"
             )

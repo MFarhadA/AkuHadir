@@ -77,10 +77,10 @@ fun AkuHadirApp() {
         }
         composable("home") {
             HomeScreen(
-                onNavigateToSessionDetails = { title, meeting ->
+                onNavigateToSessionDetails = { id_sesi, title, meeting ->
                     val encodedTitle = Uri.encode(title)
                     val encodedMeeting = Uri.encode(meeting)
-                    navController.navigate("sessionDetails/$encodedTitle/$encodedMeeting")
+                    navController.navigate("sessionDetails/$id_sesi/$encodedTitle/$encodedMeeting")
                 },
                 onNavigateToAddSession = { navController.navigate("add_session") },
                 onNavigateToListSessions = { navController.navigate("list_sessions") },
@@ -102,10 +102,10 @@ fun AkuHadirApp() {
         composable("list_sessions") {
             ListSessionScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToSessionDetails = { title, meeting ->
+                onNavigateToSessionDetails = { id_sesi, title, meeting ->
                     val encodedTitle = Uri.encode(title)
                     val encodedMeeting = Uri.encode(meeting)
-                    navController.navigate("sessionDetails/$encodedTitle/$encodedMeeting")
+                    navController.navigate("sessionDetails/$id_sesi/$encodedTitle/$encodedMeeting")
                 }
             )
         }
@@ -116,15 +116,18 @@ fun AkuHadirApp() {
             )
         }
         composable(
-            route = "sessionDetails/{title}/{meeting}",
+            route = "sessionDetails/{id_sesi}/{title}/{meeting}",
             arguments = listOf(
+                navArgument("id_sesi") { type = NavType.IntType },
                 navArgument("title") { type = NavType.StringType },
                 navArgument("meeting") { type = NavType.StringType }
             )
         ) { backStackEntry ->
+            val id_sesi = backStackEntry.arguments?.getInt("id_sesi") ?: 0
             val title = backStackEntry.arguments?.getString("title") ?: ""
             val meeting = backStackEntry.arguments?.getString("meeting") ?: ""
             SessionDetailsScreen(
+                id = id_sesi,
                 title = title,
                 meeting = meeting,
                 onNavigateBack = { navController.popBackStack() }
