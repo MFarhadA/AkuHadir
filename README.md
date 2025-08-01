@@ -1,6 +1,6 @@
 # AkuHadir
 
-AkuHadir adalah sistem sederhana pencatatan kehadiran online berbasis Android, yang dikembangkan menggunakan **Jetpack Compose** dan **Supabase** sebagai backend. Aplikasi ini ditujukan untuk mencatat kehadiran mahasiswa atau peserta dalam suatu sesi pertemuan, lengkap dengan informasi status kehadiran, detail peserta, dan divisi.
+AkuHadir adalah sistem sederhana pencatatan kehadiran online berbasis Android, yang dikembangkan menggunakan **Jetpack Compose** dan **Supabase** sebagai backend. Aplikasi ini ditujukan untuk mencatat kehadiran mahasiswa atau peserta dalam suatu sesi pertemuan di dalam organisasi OXIGEN, lengkap dengan informasi status kehadiran, detail peserta, dan divisi.
 
 ## ✨ Fitur Utama
 
