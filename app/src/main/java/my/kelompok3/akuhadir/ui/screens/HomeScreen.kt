@@ -1,6 +1,9 @@
-// HomeScreen.kt - Updated version dengan sticky header dan scrollable content
+// HomeScreen.kt - Fixed version
+@file:Suppress("NAME_SHADOWING")
+
 package my.kelompok3.akuhadir.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -18,45 +21,307 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import my.kelompok3.akuhadir.data.model.StatusData
+import my.kelompok3.akuhadir.data.model.User
 import my.kelompok3.akuhadir.ui.theme.*
 import my.kelompok3.akuhadir.ui.components.AttendanceBottomSheet
-import my.kelompok3.akuhadir.ui.components.SessionAvailableCard
-import my.kelompok3.akuhadir.ui.components.SessionOwnerCard
-import my.kelompok3.akuhadir.ui.components.SessionOnlineCard
-import my.kelompok3.akuhadir.ui.components.SessionOfflineCard
+import my.kelompok3.akuhadir.data.model.SupabaseInstance
+
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.result.PostgrestResult
+
+import my.kelompok3.akuhadir.data.manager.UserRegistrationManager
+import my.kelompok3.akuhadir.data.model.UserProfile
+import my.kelompok3.akuhadir.data.manager.RoleManager
+import my.kelompok3.akuhadir.data.model.RoleData
+import my.kelompok3.akuhadir.data.model.RoleType
+import my.kelompok3.akuhadir.ui.components.SessionCardMember
+import my.kelompok3.akuhadir.ui.components.SessionSekretarisCard
+import my.kelompok3.akuhadir.data.model.SesiData
+import kotlinx.coroutines.launch
+import my.kelompok3.akuhadir.data.model.IdSesiResponse
+import my.kelompok3.akuhadir.data.model.Presensi
+import my.kelompok3.akuhadir.data.model.Sesi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToSessionDetails: (String, String) -> Unit,
+    onNavigateToSessionDetails: (Int,String, String) -> Unit,
     onNavigateToAddSession: () -> Unit,
     onNavigateToListSessions: () -> Unit,
-    onNavigateToAttendance: () -> Unit,
+    onNavigateToEditSession: (SesiData) -> Unit
 ) {
-    // State untuk mengontrol visibility BottomSheet
+    val roleManager = remember { RoleManager() }
+    val coroutineScope = rememberCoroutineScope()
+
+    var currentUserRole by remember { mutableStateOf<RoleData?>(null) }
+    var isLoadingRole by remember { mutableStateOf(false) }
+    var roleError by remember { mutableStateOf<String?>(null) }
+    var roleStatistics by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+
+    var currentSession by remember { mutableStateOf<SesiData?>(null) }
+    var isLoadingScreen by remember { mutableStateOf(true) }
+    var connectionStatus by remember { mutableStateOf("Testing connection...") }
+
+    val supabase = SupabaseInstance.client
+    val currentUserId = UserRegistrationManager.getCurrentUserId()
+    val currentUserEmail = UserRegistrationManager.getCurrentUserEmail()
+
+    var userProfile by remember { mutableStateOf<UserProfile?>(null) }
+    var isLoadingProfile by remember { mutableStateOf(false) }
+    var profileError by remember { mutableStateOf<String?>(null) }
+    var refreshTrigger by remember { mutableStateOf(0) }
+
+    var sessionsFromDb by remember { mutableStateOf<List<SesiData>>(emptyList()) }
+    var isLoadingSessions by remember { mutableStateOf(true) }
+    var sessionsError by remember { mutableStateOf<String?>(null) }
+
     var showAttendanceBottomSheet by remember { mutableStateOf(false) }
+    var sessionType by remember { mutableStateOf("none") }
 
-    // State untuk menentukan jenis session yang ditampilkan
-    var sessionType by remember { mutableStateOf("none") } // "none", "owner", "online", "offline"
-
-    // Buat SheetState dengan expanded = true agar bottomsheet terbuka penuh
     val bottomSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
-
-    // Scroll state untuk konten yang dapat di-scroll
     val scrollState = rememberScrollState()
+
+    // Test koneksi database
+    LaunchedEffect(Unit) {
+        coroutineScope.launch {
+            try {
+                Log.d("HomeScreen", "Starting connection test from HomeScreen")
+                println("HomeScreen: Welcome, $currentUserEmail! Your ID is $currentUserId and your role is ${currentUserRole?.role}")
+
+                val isConnected = SupabaseInstance.testConnection()
+                connectionStatus = if (isConnected) {
+                    "Database connected successfully!"
+                } else {
+                    "Database connection failed!"
+                }
+
+                Log.d("HomeScreen", "Connection status: $connectionStatus")
+
+                // Test pengambilan data user (commented untuk mencegah error)
+                /*
+                val users = supabase.from("user").select().decodeList<User>()
+                val user = supabase.from("user").select(columns = Columns.list("id_user, email,password")).decodeSingle<User>()
+
+                // Hapus operasi delete yang berbahaya
+                // val deletedCity = supabase.from("user").delete { ... }
+
+                Log.d("HomeScreen", "User: ${user.email}, ${user.password}")
+                Log.d("HomeScreen", "Users count: ${users.size}")
+                */
+
+            } catch (e: Exception) {
+                connectionStatus = "Connection error: ${e.message}"
+                Log.e("HomeScreen", "Connection error: ${e.message}", e)
+            }
+        }
+    }
+
+    // Load user profile
+    LaunchedEffect(Unit) {
+        coroutineScope.launch {
+            try {
+                isLoadingProfile = true
+                profileError = null
+
+                val currentUserId = UserRegistrationManager.getCurrentUserId()
+                if (currentUserId != null) {
+                    val result = supabase.from("user_profile")
+                        .select {
+                            filter {
+                                eq("id_user", currentUserId)
+                            }
+                        }
+                        .decodeSingle<UserProfile>()
+
+                    userProfile = result
+                    Log.d("HomeScreen", "User Profile: ${userProfile?.nama}, NIM: ${userProfile?.nim} Role: ${userProfile?.role} Divisi: ${userProfile?.divisi}")
+                }
+            } catch (e: Exception) {
+                profileError = "Error loading profile: ${e.message}"
+                Log.e("HomeScreen", "Profile error: ${e.message}", e)
+            } finally {
+                isLoadingProfile = false
+            }
+        }
+    }
+
+    suspend fun loadAttendanceStatusForUser(userProfile: UserProfile): Map<String, Int> {
+        val supabase = SupabaseInstance.client
+
+        Log.d("HomeScreen", "Loading attendance status for user: ${userProfile.id_user_profile}, divisi: ${userProfile.divisi}")
+
+        try {
+            // Get all sessions for the user's division
+            val allSessions = supabase.from("sesi")
+                .select {
+                    filter {
+                        ilike("divisi", userProfile.divisi.lowercase())
+                    }
+                }
+                .decodeList<SesiData>()
+            Log.d("HomeScreen", "All sessions for ${userProfile.divisi}: ${allSessions.size}")
+
+            // Get all presences for the user
+            val presences = supabase.from("presensi")
+                .select {
+                    filter {
+                        eq("id_user_profile", userProfile.id_user_profile)
+                    }
+                }
+                .decodeList<Presensi>()
+            Log.d("HomeScreen", "Presences for user ${userProfile.id_user_profile}: ${presences.size}")
+
+            // Count attendance by status
+            val hadirCount = presences.count { it.kehadiran.equals("hadir", ignoreCase = true) }
+            val izinCount = presences.count { it.kehadiran.equals("izin", ignoreCase = true) }
+            val sakitCount = presences.count { it.kehadiran.equals("sakit", ignoreCase = true) }
+
+            // Calculate alpha (absent) count
+            val alphaCount = (allSessions.size - (hadirCount + izinCount + sakitCount)).coerceAtLeast(0)
+
+            Log.d("HomeScreen", "Attendance stats - Hadir: $hadirCount, Izin: $izinCount, Sakit: $sakitCount, Alpha: $alphaCount")
+            Log.d("HomeScreen", "Total sessions: ${allSessions.size}, Total presences: ${presences.size}")
+
+            return mapOf(
+                "hadir" to hadirCount,
+                "izin" to izinCount,
+                "sakit" to sakitCount,
+                "alpha" to alphaCount
+            )
+        } catch (e: Exception) {
+            Log.e("HomeScreen", "Error calculating attendance status: ${e.message}", e)
+            // Return empty map in case of error
+            return mapOf(
+                "hadir" to 0,
+                "izin" to 0,
+                "sakit" to 0,
+                "alpha" to 0
+            )
+        }
+    }
+
+    LaunchedEffect(userProfile) {
+        userProfile?.let { profile ->
+            try {
+                val statusCounts = loadAttendanceStatusForUser(profile)
+                roleStatistics = statusCounts
+            } catch (e: Exception) {
+                roleError = "Error loading attendance status: ${e.message}"
+            }
+        }
+    }
+
+    // Load sessions
+    LaunchedEffect(userProfile, refreshTrigger) {
+        coroutineScope.launch {
+            try {
+                isLoadingSessions = true
+                sessionsError = null
+
+                // Get current user ID
+                val currentUserId = UserRegistrationManager.getCurrentUserId()
+                if (currentUserId == null) {
+                    sessionsError = "User ID tidak ditemukan"
+                    isLoadingSessions = false
+                    return@launch
+                }
+
+                // Create role manager instance
+                val roleManager = RoleManager()
+
+                // Check user role
+                val userRole = roleManager.getUserRoleByUserId(currentUserId)
+                val isSekretaris = userRole?.let { roleManager.isSekretaris(currentUserId) } ?: false
+
+                // Query sessions based on role
+                val result = if (isSekretaris) {
+                    // If user is sekretaris, show all sessions
+                    Log.d("ListSessionScreen", "User is sekretaris, showing all sessions")
+                    SupabaseInstance.client.from("sesi")
+                        .select {
+                            order("pertemuan", Order.DESCENDING)
+                            limit(3)
+                        }
+                        .decodeList<SesiData>()
+                        .sortedByDescending { it.pertemuan.toIntOrNull() ?: 0 }
+                } else {
+                    // If user is anggota, filter by division
+                    userProfile?.divisi?.let { divisi ->
+                        Log.d("ListSessionScreen", "User is anggota, filtering by divisi: $divisi")
+                        SupabaseInstance.client.from("sesi")
+                            .select {
+                                filter {
+                                    ilike("divisi", divisi.lowercase())
+                                }
+                                order("pertemuan", Order.DESCENDING)
+                                limit(3)
+                            }
+                            .decodeList<SesiData>()
+                            .sortedByDescending { it.pertemuan.toIntOrNull() ?: 0 }
+                    } ?: emptyList()
+                }
+
+                sessionsFromDb = result ?: emptyList()
+                Log.d("ListSessionScreen", "Loaded ${sessionsFromDb.size} sessions")
+
+            } catch (e: Exception) {
+                sessionsError = "Gagal memuat sesi: ${e.message}"
+                Log.e("ListSessionScreen", "Error loading sessions: ${e.message}", e)
+            } finally {
+                
+                isLoadingSessions = false
+            }
+        }
+    }
+
+    // Load user role
+    LaunchedEffect(Unit) {
+        coroutineScope.launch {
+            try {
+                isLoadingRole = true
+                roleError = null
+
+                val currentUserId = UserRegistrationManager.getCurrentUserId()
+                if (currentUserId != null) {
+                    currentUserRole = roleManager.getUserRoleByUserId(currentUserId)
+                    roleStatistics = roleManager.getRoleStatistics()
+
+                    currentUserRole?.let { roleData ->
+                        Log.d("HomeScreen", "Current User Role: ${roleData.role}")
+                        Log.d("HomeScreen", "Role Display Name: ${roleManager.getRoleDisplayName(roleData.role)}")
+
+                        val isAnggota = roleManager.isAnggota(currentUserId)
+                        val isSekretaris = roleManager.isSekretaris(currentUserId)
+                        val isPengurus = roleManager.isPengurus(currentUserId)
+
+                        Log.d("HomeScreen", "Is Anggota: $isAnggota, Is Sekretaris: $isSekretaris, Is Pengurus: $isPengurus")
+                    }
+
+                    Log.d("HomeScreen", "Role Statistics: $roleStatistics")
+                }
+            } catch (e: Exception) {
+                roleError = "Error loading role: ${e.message}"
+                Log.e("HomeScreen", "Error loading user role: ${e.message}", e)
+            } finally {
+                isLoadingRole = false
+            }
+        }
+    }
+
+    fun refreshData() {
+        refreshTrigger++
+    }
 
     Box(
         modifier = Modifier
@@ -85,12 +350,11 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-94).dp) // Adjust positioning
+                    .offset(y = (-94).dp)
                     .padding(horizontal = 30.dp)
             ) {
                 Spacer(modifier = Modifier.height(25.dp))
 
-                // Welcome Message
                 Text(
                     modifier = Modifier.padding(start = 2.dp),
                     text = "Selamat Datang!",
@@ -128,14 +392,14 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Muhammad Farhad Ajilla",
+                                text = userProfile?.nama ?: "Loading...",
                                 color = Black,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 lineHeight = 18.sp
                             )
                             Text(
-                                text = "2355201063",
+                                text = userProfile?.nim ?: "Loading...",
                                 color = Black,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
@@ -151,164 +415,113 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 130.dp) // Beri ruang untuk header
+                .padding(top = 140.dp)
                 .verticalScroll(scrollState)
                 .padding(horizontal = 30.dp)
-                .padding(bottom = 100.dp) // Beri ruang untuk FAB
+                .padding(bottom = 100.dp)
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
             // Statistics Section
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Pie Chart Card
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Box(
-                        modifier = Modifier.padding(12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        PieChartWithCenter(
-                            data = listOf(
-                                StatusData("Hadir", 13, GreenColor),
-                                StatusData("Izin", 2, PrimaryColor),
-                                StatusData("Sakit", 2, RedColor),
-                                StatusData("Alpha", 1, GrayColor)
-                            )
-                        )
-                    }
-                }
-
-                // Status Items Card
-                Card(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        StatusItemHorizontal(
-                            color = GreenColor,
-                            count = "13",
-                            label = "Hadir"
-                        )
-                        StatusItemHorizontal(
-                            color = PrimaryColor,
-                            count = "2",
-                            label = "Izin"
-                        )
-                        StatusItemHorizontal(
-                            color = RedColor,
-                            count = "2",
-                            label = "Sakit"
-                        )
-                        StatusItemHorizontal(
-                            color = GrayColor,
-                            count = "1",
-                            label = "Alpha"
-                        )
-                    }
-                }
-
-                // Box untuk mengisi ruang kosong
+            if (isLoadingProfile || userProfile == null) {
+                // Show loading indicator while profile is loading
                 Box(
                     modifier = Modifier
-                        .weight(0.2f)
-                        .fillMaxHeight()
-                        .background(PrimaryColor, RoundedCornerShape(15.dp))
-                )
+                        .fillMaxWidth()
+                        .height(150.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Pie Chart Card
+                    Card(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Use the actual data from roleStatistics
+                            PieChartWithCenter(
+                                data = listOf(
+                                    StatusData("Hadir", roleStatistics["hadir"] ?: 0, GreenColor),
+                                    StatusData("Izin", roleStatistics["izin"] ?: 0, PrimaryColor),
+                                    StatusData("Sakit", roleStatistics["sakit"] ?: 0, RedColor),
+                                    StatusData("Alpha", roleStatistics["alpha"] ?: 0, GrayColor)
+                                )
+                            )
+                        }
+                    }
+
+                    // Status Items Card
+                    Card(
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            // Use the actual data from roleStatistics
+                            StatusItemHorizontal(color = GreenColor, count = (roleStatistics["hadir"] ?: 0).toString(), label = "Hadir")
+                            StatusItemHorizontal(color = PrimaryColor, count = (roleStatistics["izin"] ?: 0).toString(), label = "Izin")
+                            StatusItemHorizontal(color = RedColor, count = (roleStatistics["sakit"] ?: 0).toString(), label = "Sakit")
+                            StatusItemHorizontal(color = GrayColor, count = (roleStatistics["alpha"] ?: 0).toString(), label = "Alpha")
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(0.2f)
+                            .fillMaxHeight()
+                            .background(PrimaryColor, RoundedCornerShape(15.dp))
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Session Card - Menggunakan components yang berbeda berdasarkan sessionType
-            when (sessionType) {
-                "none" -> {
-                    SessionAvailableCard(
-                        onNavigateToAddSession = onNavigateToAddSession
-                    )
-                }
-                "owner" -> {
-                    SessionOwnerCard(
-                        title = "Pembelajaran Design Wireframe",
-                        meeting = "Pertemuan 16",
-                        onEditSession = {
-                            // Logic untuk mengedit sesi
-                        },
-                        onCloseSession = {
-                            // Logic untuk menutup sesi
-                            sessionType = "none"
-                        },
-                        onViewParticipants = {
-                            // Logic untuk melihat peserta
+            // Role-based Session Cards
+            if (isLoadingRole) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            } else {
+                currentUserRole?.let { roleData ->
+                    when (roleManager.getRoleType(roleData.role)) {
+                        RoleType.PENGURUS -> {
+                            SessionCardMember()
                         }
-                    )
-                }
-                "online" -> {
-                    SessionOnlineCard(
-                        title = "Pembelajaran Design Wireframe",
-                        meeting = "Pertemuan 16",
-                        time = "10:00 WIB",
-                        onJoinMeeting = {
-                            // Logic untuk join meeting (buka link meet)
+                        RoleType.SEKRETARIS -> {
+                            SessionSekretarisCard(
+                                onNavigateToAddSession = onNavigateToAddSession,
+                                onNavigateToSessionDetails = onNavigateToSessionDetails,
+                                onEditSession = onNavigateToEditSession,
+                                refreshData = { refreshData() }
+                            )
                         }
-                    )
-                }
-                "offline" -> {
-                    SessionOfflineCard(
-                        title = "Pembelajaran Design Wireframe",
-                        meeting = "Pertemuan 16",
-                        location = "B 201",
-                        time = "11:00 WIB"
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Buttons untuk demo (hapus ini di production)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = { sessionType = "none" },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = GrayColor)
-                ) {
-                    Text("None", fontSize = 9.sp, color = Color.White)
-                }
-                Button(
-                    onClick = { sessionType = "owner" },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = RedColor)
-                ) {
-                    Text("Owner", fontSize = 9.sp, color = Color.White)
-                }
-                Button(
-                    onClick = { sessionType = "online" },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = GreenColor)
-                ) {
-                    Text("Online", fontSize = 9.sp, color = Color.White)
-                }
-                Button(
-                    onClick = { sessionType = "offline" },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)
-                ) {
-                    Text("Offline", fontSize = 9.sp, color = Color.White)
+                        RoleType.ANGGOTA -> {
+                            SessionCardMember()
+                        }
+                        null -> {
+                            Text(
+                                text = "Role tidak dikenali",
+                                color = Color.Gray,
+                                fontSize = 14.sp,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -348,40 +561,63 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Session List - Hanya 3 item terbaru
-            val sessions = listOf(
-                Triple("Pembelajaran UI/UX", "Pertemuan 15", "Hadir" to GreenColor),
-                Triple("Pembelajaran UI/UX", "Pertemuan 14", "Izin" to PrimaryColor),
-                Triple("Pembelajaran UI/UX", "Pertemuan 13", "Sakit" to RedColor)
-            )
-
-            sessions.forEach { (title, meeting, status) ->
-                SessionItemCard(
-                    title = title,
-                    meeting = meeting,
-                    status = status,
-                    onNavigateToSessionDetails = onNavigateToSessionDetails,
+            // Sessions List
+            if (isLoadingSessions) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+            } else if (sessionsError != null) {
+                Text(
+                    text = sessionsError ?: "",
+                    color = Color.Red,
+                    modifier = Modifier.padding(16.dp)
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+            } else {
+                sessionsFromDb.forEach { sesi ->
+
+                    // Tentukan warna box berdasarkan jenis divisi
+                    val divisiColor = when (sesi.divisi?.lowercase()) {
+                        "software" -> GreenColor
+                        "hardware" -> PrimaryColor
+                        "game" -> RedColor
+                        "alpha" -> GrayColor
+                        else -> GrayColor
+                    }
+
+                    // Tentukan warna status berdasarkan jenis sesi
+                    val statusColor = when (sesi.jenis_sesi?.lowercase()) {
+                        "hadir" -> GreenColor
+                        "izin" -> PrimaryColor
+                        "sakit" -> RedColor
+                        else -> GrayColor
+                    }
+
+                    SessionItemCard(
+                        id_sesi = sesi.id_sesi ?: 0,
+                        title = sesi.nama_materi ?: "Sesi tanpa nama",
+                        meeting = "pertemuan ${sesi.pertemuan ?: "-"}",
+                        jenisSesi = divisiColor,
+                        status = sesi.jenis_sesi?.let { it to statusColor } ?: ("-" to GrayColor),
+                        onNavigateToSessionDetails = onNavigateToSessionDetails,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
 
-            // Extra space di bawah untuk memastikan semua konten bisa di-scroll
             Spacer(modifier = Modifier.height(20.dp))
         }
 
-        // Floating Action Button - Sticky (tidak ikut scroll)
+        // Floating Action Button
         FloatingActionButton(
             onClick = {
-                showAttendanceBottomSheet = true
+                    showAttendanceBottomSheet = true
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(vertical = 25.dp, horizontal = 30.dp)
                 .fillMaxWidth()
                 .height(60.dp)
-                .zIndex(1f), // Pastikan FAB selalu di atas
+                .zIndex(1f),
             containerColor = PrimaryColor,
             shape = RoundedCornerShape(15.dp)
         ) {
@@ -391,11 +627,10 @@ fun HomeScreen(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Fingerprint,
-                    contentDescription = "Point up",
+                    contentDescription = "Aku Hadir",
                     tint = Color.White,
                     modifier = Modifier.size(30.dp)
                 )
-
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Aku Hadir",
@@ -406,20 +641,27 @@ fun HomeScreen(
             }
         }
 
-        // Tampilkan BottomSheet jika showAttendanceBottomSheet = true
+        // Bottom Sheet
         if (showAttendanceBottomSheet) {
             ModalBottomSheet(
-                onDismissRequest = { showAttendanceBottomSheet = false },
+                onDismissRequest = {
+                    showAttendanceBottomSheet = false
+                    refreshData() // Call refreshData here
+                },
                 sheetState = bottomSheetState,
                 containerColor = Color.Transparent,
                 contentColor = Color.Transparent,
                 dragHandle = null
             ) {
                 AttendanceBottomSheet(
-                    onDismiss = { showAttendanceBottomSheet = false },
-                    onSubmitAttendance = {
-                        onNavigateToAttendance()
+                    userProfile = userProfile,
+                    onDismiss = {
                         showAttendanceBottomSheet = false
+                        refreshData() // Also call refreshData here if you want to ensure it's refreshed on submit
+                    },
+                    onSubmitAttendance = {
+                        showAttendanceBottomSheet = false
+                        refreshData() // Call refreshData here as well
                     }
                 )
             }
@@ -427,7 +669,6 @@ fun HomeScreen(
     }
 }
 
-// Existing components remain the same
 @Composable
 fun StatusItemHorizontal(
     color: Color,
@@ -473,10 +714,7 @@ fun PieChartWithCenter(
         modifier = modifier.size(chartSize),
         contentAlignment = Alignment.Center
     ) {
-        // Pie Chart
-        Canvas(
-            modifier = Modifier.fillMaxSize()
-        ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2, size.height / 2)
             val radius = size.minDimension / 2 - strokeWidth.toPx() / 2
 
@@ -491,10 +729,7 @@ fun PieChartWithCenter(
                     sweepAngle = sweepAngle,
                     useCenter = false,
                     style = Stroke(strokeWidth.toPx()),
-                    topLeft = Offset(
-                        center.x - radius,
-                        center.y - radius
-                    ),
+                    topLeft = Offset(center.x - radius, center.y - radius),
                     size = Size(radius * 2, radius * 2)
                 )
 
@@ -502,10 +737,7 @@ fun PieChartWithCenter(
             }
         }
 
-        // Center Text
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = total.toString(),
                 fontSize = 30.sp,
@@ -526,13 +758,15 @@ fun PieChartWithCenter(
 
 @Composable
 fun SessionItemCard(
+    id_sesi: Int,
     title: String,
     meeting: String,
+    jenisSesi: Color,
     status: Pair<String, Color>,
-    onNavigateToSessionDetails: (String, String) -> Unit
+    onNavigateToSessionDetails: (Int, String, String) -> Unit
 ) {
     Card(
-        onClick = { onNavigateToSessionDetails(title, meeting) },
+        onClick = { onNavigateToSessionDetails(id_sesi, title, meeting) },
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(15.dp)
@@ -545,13 +779,14 @@ fun SessionItemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
             ) {
                 Box(
                     modifier = Modifier
                         .width(10.dp)
                         .height(32.dp)
-                        .background(RedColor, RoundedCornerShape(15.dp))
+                        .background(jenisSesi, RoundedCornerShape(15.dp))
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {

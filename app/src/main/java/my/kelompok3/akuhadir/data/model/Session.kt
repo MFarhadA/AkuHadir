@@ -1,13 +1,14 @@
 package my.kelompok3.akuhadir.data.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Session(
-    val id: String = "",
-    val title: String = "",
-    val meeting: String = "",
-    val date: String = "",
-    val time: String = "",
-    val status: AttendanceStatus = AttendanceStatus.ALPHA,
-    val isOnline: Boolean = false,
-    val meetLink: String = "",
-    val room: String = ""
+    val nama_materi: String,
+    val waktu_masuk: String,
+    val divisi: String,
+    val jenis_sesi: String,
+    val pertemuan: Int,
+    val link_meet: String? = null,
+    val ruangan: String? = null
 )
