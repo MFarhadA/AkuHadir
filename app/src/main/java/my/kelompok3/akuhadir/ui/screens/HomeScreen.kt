@@ -47,6 +47,9 @@ import my.kelompok3.akuhadir.ui.components.SessionCardMember
 import my.kelompok3.akuhadir.ui.components.SessionSekretarisCard
 import my.kelompok3.akuhadir.data.model.SesiData
 import kotlinx.coroutines.launch
+import my.kelompok3.akuhadir.data.model.IdSesiResponse
+import my.kelompok3.akuhadir.data.model.Presensi
+import my.kelompok3.akuhadir.data.model.Sesi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,6 +156,72 @@ fun HomeScreen(
         }
     }
 
+    suspend fun loadAttendanceStatusForUser(userProfile: UserProfile): Map<String, Int> {
+        val supabase = SupabaseInstance.client
+
+        Log.d("HomeScreen", "Loading attendance status for user: ${userProfile.id_user_profile}, divisi: ${userProfile.divisi}")
+
+        try {
+            // Get all sessions for the user's division
+            val allSessions = supabase.from("sesi")
+                .select {
+                    filter {
+                        ilike("divisi", userProfile.divisi.lowercase())
+                    }
+                }
+                .decodeList<SesiData>()
+            Log.d("HomeScreen", "All sessions for ${userProfile.divisi}: ${allSessions.size}")
+
+            // Get all presences for the user
+            val presences = supabase.from("presensi")
+                .select {
+                    filter {
+                        eq("id_user_profile", userProfile.id_user_profile)
+                    }
+                }
+                .decodeList<Presensi>()
+            Log.d("HomeScreen", "Presences for user ${userProfile.id_user_profile}: ${presences.size}")
+
+            // Count attendance by status
+            val hadirCount = presences.count { it.kehadiran.equals("hadir", ignoreCase = true) }
+            val izinCount = presences.count { it.kehadiran.equals("izin", ignoreCase = true) }
+            val sakitCount = presences.count { it.kehadiran.equals("sakit", ignoreCase = true) }
+
+            // Calculate alpha (absent) count
+            val alphaCount = (allSessions.size - (hadirCount + izinCount + sakitCount)).coerceAtLeast(0)
+
+            Log.d("HomeScreen", "Attendance stats - Hadir: $hadirCount, Izin: $izinCount, Sakit: $sakitCount, Alpha: $alphaCount")
+            Log.d("HomeScreen", "Total sessions: ${allSessions.size}, Total presences: ${presences.size}")
+
+            return mapOf(
+                "hadir" to hadirCount,
+                "izin" to izinCount,
+                "sakit" to sakitCount,
+                "alpha" to alphaCount
+            )
+        } catch (e: Exception) {
+            Log.e("HomeScreen", "Error calculating attendance status: ${e.message}", e)
+            // Return empty map in case of error
+            return mapOf(
+                "hadir" to 0,
+                "izin" to 0,
+                "sakit" to 0,
+                "alpha" to 0
+            )
+        }
+    }
+
+    LaunchedEffect(userProfile) {
+        userProfile?.let { profile ->
+            try {
+                val statusCounts = loadAttendanceStatusForUser(profile)
+                roleStatistics = statusCounts
+            } catch (e: Exception) {
+                roleError = "Error loading attendance status: ${e.message}"
+            }
+        }
+    }
+
     // Load sessions
     LaunchedEffect(userProfile, refreshTrigger) {
         coroutineScope.launch {
@@ -210,6 +279,7 @@ fun HomeScreen(
                 sessionsError = "Gagal memuat sesi: ${e.message}"
                 Log.e("ListSessionScreen", "Error loading sessions: ${e.message}", e)
             } finally {
+                
                 isLoadingSessions = false
             }
         }
@@ -353,58 +423,72 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Statistics Section
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Pie Chart Card
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Box(
-                        modifier = Modifier.padding(12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        PieChartWithCenter(
-                            data = listOf(
-                                StatusData("Hadir", 13, GreenColor),
-                                StatusData("Izin", 2, PrimaryColor),
-                                StatusData("Sakit", 2, RedColor),
-                                StatusData("Alpha", 1, GrayColor)
-                            )
-                        )
-                    }
-                }
-
-                // Status Items Card
-                Card(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        StatusItemHorizontal(color = GreenColor, count = "13", label = "Hadir")
-                        StatusItemHorizontal(color = PrimaryColor, count = "2", label = "Izin")
-                        StatusItemHorizontal(color = RedColor, count = "2", label = "Sakit")
-                        StatusItemHorizontal(color = GrayColor, count = "1", label = "Alpha")
-                    }
-                }
-
+            if (isLoadingProfile || userProfile == null) {
+                // Show loading indicator while profile is loading
                 Box(
                     modifier = Modifier
-                        .weight(0.2f)
-                        .fillMaxHeight()
-                        .background(PrimaryColor, RoundedCornerShape(15.dp))
-                )
+                        .fillMaxWidth()
+                        .height(150.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Pie Chart Card
+                    Card(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Use the actual data from roleStatistics
+                            PieChartWithCenter(
+                                data = listOf(
+                                    StatusData("Hadir", roleStatistics["hadir"] ?: 0, GreenColor),
+                                    StatusData("Izin", roleStatistics["izin"] ?: 0, PrimaryColor),
+                                    StatusData("Sakit", roleStatistics["sakit"] ?: 0, RedColor),
+                                    StatusData("Alpha", roleStatistics["alpha"] ?: 0, GrayColor)
+                                )
+                            )
+                        }
+                    }
+
+                    // Status Items Card
+                    Card(
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            // Use the actual data from roleStatistics
+                            StatusItemHorizontal(color = GreenColor, count = (roleStatistics["hadir"] ?: 0).toString(), label = "Hadir")
+                            StatusItemHorizontal(color = PrimaryColor, count = (roleStatistics["izin"] ?: 0).toString(), label = "Izin")
+                            StatusItemHorizontal(color = RedColor, count = (roleStatistics["sakit"] ?: 0).toString(), label = "Sakit")
+                            StatusItemHorizontal(color = GrayColor, count = (roleStatistics["alpha"] ?: 0).toString(), label = "Alpha")
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(0.2f)
+                            .fillMaxHeight()
+                            .background(PrimaryColor, RoundedCornerShape(15.dp))
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -421,6 +505,7 @@ fun HomeScreen(
                         RoleType.SEKRETARIS -> {
                             SessionSekretarisCard(
                                 onNavigateToAddSession = onNavigateToAddSession,
+                                onNavigateToSessionDetails = onNavigateToSessionDetails,
                                 onEditSession = onNavigateToEditSession,
                                 refreshData = { refreshData() }
                             )
@@ -524,7 +609,9 @@ fun HomeScreen(
 
         // Floating Action Button
         FloatingActionButton(
-            onClick = { showAttendanceBottomSheet = true },
+            onClick = {
+                    showAttendanceBottomSheet = true
+            },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(vertical = 25.dp, horizontal = 30.dp)
@@ -540,7 +627,7 @@ fun HomeScreen(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Fingerprint,
-                    contentDescription = "Point up",
+                    contentDescription = "Aku Hadir",
                     tint = Color.White,
                     modifier = Modifier.size(30.dp)
                 )
@@ -557,7 +644,10 @@ fun HomeScreen(
         // Bottom Sheet
         if (showAttendanceBottomSheet) {
             ModalBottomSheet(
-                onDismissRequest = { showAttendanceBottomSheet = false },
+                onDismissRequest = {
+                    showAttendanceBottomSheet = false
+                    refreshData() // Call refreshData here
+                },
                 sheetState = bottomSheetState,
                 containerColor = Color.Transparent,
                 contentColor = Color.Transparent,
@@ -565,9 +655,13 @@ fun HomeScreen(
             ) {
                 AttendanceBottomSheet(
                     userProfile = userProfile,
-                    onDismiss = { showAttendanceBottomSheet = false },
+                    onDismiss = {
+                        showAttendanceBottomSheet = false
+                        refreshData() // Also call refreshData here if you want to ensure it's refreshed on submit
+                    },
                     onSubmitAttendance = {
                         showAttendanceBottomSheet = false
+                        refreshData() // Call refreshData here as well
                     }
                 )
             }

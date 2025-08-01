@@ -189,7 +189,6 @@ fun LoginScreen(
                             val (isLoginSuccessful, currentUserId) = authManager.login(email, password)
                             val newUser = User(email = email, password = hashedPassword)
 
-
                             if (isLoginSuccessful) {
                                 // Dapatkan email dari UserRegistrationManager jika diperlukan
                                 val currentUserEmail = UserRegistrationManager.getCurrentUserEmail()

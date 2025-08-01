@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -33,6 +34,7 @@ import kotlinx.coroutines.withContext
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.storage.storage
 import kotlinx.serialization.Serializable
+import my.kelompok3.akuhadir.data.model.IdSesiResponse
 import my.kelompok3.akuhadir.data.model.PresensiInsert
 import my.kelompok3.akuhadir.data.model.Sesi
 import my.kelompok3.akuhadir.data.model.SesiData
@@ -52,13 +54,18 @@ fun AttendanceBottomSheet(
     Log.d("AttendanceBottomSheet", "Bottom sheet opened")
     Log.d("AttendanceBottomSheet", "userId: $userProfile")
 
+
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+
+    var activeSessionIds by remember { mutableStateOf<List<Int>>(emptyList()) }
 
     var photoUri by remember { mutableStateOf<Uri?>(null) }
     var selectedStatus by remember { mutableStateOf("Hadir") }
     var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
     var isSubmitting by remember { mutableStateOf(false) }
+
+    var isAvailable = activeSessionIds.isNotEmpty()
 
     // Menggunakan SupabaseClient yang sudah ada
     val supabase = SupabaseInstance.client
@@ -128,29 +135,62 @@ fun AttendanceBottomSheet(
         }
     }
 
-    // Fungsi untuk mendapatkan sesi berdasarkan divisi user dan keterangan 'berjalan'
-    suspend fun getActiveSesiByDivision(divisi: String): Int? {
+    // Fungsi untuk mendapatkan sesi aktif berdasarkan divisi user yang belum ada presensinya
+    suspend fun getActiveSessionsNotYetAttendedByUser(
+        divisi: String,
+        idUserProfile: Int
+    ): List<Int> {
+        isAvailable = false
         return try {
+            // Ambil semua sesi aktif divisi tertentu dengan filter
             val sesiList = supabase.from("sesi")
-                .select() {
+                .select {
                     filter {
-                        ilike("divisi", divisi.lowercase())
+                        ilike("divisi", divisi.lowercase()) // Menggunakan eq untuk kecocokan yang tepat
                         eq("Keterangan", "berjalan")
                     }
                 }
                 .decodeList<Sesi>()
 
-            if (sesiList.isNotEmpty()) {
-                val sesi = sesiList.first()
-                Log.d("AttendanceBottomSheet", "Found active session: ${sesi.id_sesi}")
-                sesi.id_sesi
-            } else {
-                Log.w("AttendanceBottomSheet", "No active session found for division: $divisi")
-                null
+            if (sesiList.isEmpty()) {
+                Log.w("AttendanceBottomSheet", "No active sessions found for division: $divisi")
+                return emptyList()
             }
+
+            // Ambil semua id_sesi yang sudah user presensi
+            val attendedSessions = supabase.from("presensi")
+                .select {
+                    filter {
+                        eq("id_user_profile", idUserProfile)
+                    }
+                }
+                .decodeList<IdSesiResponse>() // Gunakan data class khusus
+                .map { it.id_sesi }
+
+            // Filter sesi yang belum ada di attendedSessions
+            val filteredSessions = sesiList.filter { it.id_sesi !in attendedSessions }
+
+            if (filteredSessions.isEmpty()) {
+                Log.w("AttendanceBottomSheet", "No active sessions not yet attended by user: $idUserProfile")
+                return emptyList()
+            }
+
+            isAvailable = true
+
+            Log.d("AttendanceBottomSheet", "Is available: $isAvailable")
+
+            Log.d("AttendanceBottomSheet", "Filtered sessions count: ${filteredSessions.size}")
+
+            filteredSessions.map { it.id_sesi }
         } catch (e: Exception) {
-            Log.e("AttendanceBottomSheet", "Error fetching session", e)
-            null
+            Log.e("AttendanceBottomSheet", "Error fetching or filtering sessions", e)
+            emptyList()
+        }
+    }
+
+    LaunchedEffect(userProfile) {
+        if (userProfile != null) {
+            activeSessionIds = getActiveSessionsNotYetAttendedByUser(userProfile.divisi, userProfile.id_user_profile)
         }
     }
 
@@ -179,7 +219,7 @@ fun AttendanceBottomSheet(
         }
     }
 
-    // Fungsi submit kehadiran yang lengkap
+    // Fungsi untuk submit presensi
     fun submitAttendance() {
         if (userProfile == null) {
             Log.e("AttendanceBottomSheet", "User profile is null")
@@ -188,7 +228,12 @@ fun AttendanceBottomSheet(
 
         if (photoUri == null) {
             Log.e("AttendanceBottomSheet", "No photo selected")
-            // Anda bisa menambahkan Toast atau Snackbar untuk memberi tahu user
+            Toast.makeText(context, "Harap upload bukti presensi", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (!isAvailable) {
+            Toast.makeText(context, "Tidak ada sesi yang tersedia", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -196,59 +241,65 @@ fun AttendanceBottomSheet(
 
         coroutineScope.launch {
             try {
-                // 1. Upload gambar ke Supabase Storage
                 val imageUrl = withContext(Dispatchers.IO) {
                     uploadImageToSupabase(photoUri!!)
                 }
 
                 if (imageUrl == null) {
                     Log.e("AttendanceBottomSheet", "Failed to upload image")
-                    // Handle error - show message to user
+                    Toast.makeText(context, "Gagal upload bukti presensi", Toast.LENGTH_SHORT).show()
                     isSubmitting = false
                     return@launch
                 }
 
-                // 2. Dapatkan sesi aktif berdasarkan divisi user
-                val activeSesiId = withContext(Dispatchers.IO) {
-                    getActiveSesiByDivision(userProfile.divisi)
+                var allSuccessful = true
+
+                for (sessionId in activeSessionIds) {
+                    val success = withContext(Dispatchers.IO) {
+                        savePresensiToDatabase(
+                            idUserProfile = userProfile.id_user_profile,
+                            kehadiran = selectedStatus,
+                            imagePath = imageUrl,
+                            idSesi = sessionId
+                        )
+                    }
+
+                    if (!success) {
+                        Log.e("AttendanceBottomSheet", "Failed to save attendance for session ID: $sessionId")
+                        allSuccessful = false
+                    }
                 }
 
-                if (activeSesiId == null) {
-                    Log.e("AttendanceBottomSheet", "No active session found for division: ${userProfile.divisi}")
-                    // Handle error - show message to user
-                    isSubmitting = false
-                    return@launch
-                }
-
-                // 3. Simpan data presensi ke database
-                val success = withContext(Dispatchers.IO) {
-                    savePresensiToDatabase(
-                        idUserProfile = userProfile.id_user_profile,
-                        kehadiran = selectedStatus,
-                        imagePath = imageUrl,
-                        idSesi = activeSesiId
-                    )
-                }
-
-                if (success) {
+                if (allSuccessful) {
                     withContext(Dispatchers.Main) {
-                        android.widget.Toast.makeText(
+                        Toast.makeText(
                             context,
-                            "Berhasil nelakukan presensi",
-                            android.widget.Toast.LENGTH_SHORT
+                            "Berhasil melakukan presensi untuk ${activeSessionIds.size} sesi",
+                            Toast.LENGTH_SHORT
                         ).show()
                     }
-                    Log.d("AttendanceBottomSheet", "Attendance submitted successfully")
+                    Log.d("AttendanceBottomSheet", "Attendance submitted successfully for all sessions")
                     onSubmitAttendance(selectedStatus)
                     onDismiss()
                 } else {
-                    Log.e("AttendanceBottomSheet", "Failed to save attendance")
-                    // Handle error - show message to user
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            context,
+                            "Sebagian presensi gagal disimpan",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
 
             } catch (e: Exception) {
                 Log.e("AttendanceBottomSheet", "Error in submitAttendance", e)
-                // Handle error - show message to user
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        "Terjadi kesalahan: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             } finally {
                 isSubmitting = false
             }
@@ -458,7 +509,7 @@ fun AttendanceBottomSheet(
                     .height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = GreenColor),
                 shape = RoundedCornerShape(15.dp),
-                enabled = !isSubmitting && photoUri != null
+                enabled = !isSubmitting && photoUri != null && isAvailable
             ) {
                 if (isSubmitting) {
                     CircularProgressIndicator(
@@ -475,7 +526,7 @@ fun AttendanceBottomSheet(
                     )
                 } else {
                     Text(
-                        text = "Submit Kehadiran",
+                        text = if (isAvailable) "Submit Kehadiran" else "Tidak ada sesi aktif",
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold

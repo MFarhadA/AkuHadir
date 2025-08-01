@@ -25,7 +25,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
 import my.kelompok3.akuhadir.data.model.SesiData
 import my.kelompok3.akuhadir.data.model.SupabaseInstance
@@ -39,26 +38,42 @@ import kotlinx.serialization.json.put
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditSessionScreen(
-//    sesiData: SesiData,
     sesiDataJson: String,
     onNavigateBack: () -> Unit,
     onUpdateSession: () -> Unit
 ) {
-    // Ubah JSON kembali menjadi objek SesiData
-    val decodedSesiDataJson = remember(sesiDataJson) {
-        URLDecoder.decode(sesiDataJson, StandardCharsets.UTF_8.toString())
-    }
-    val sesiData = remember(decodedSesiDataJson) {
-        Json.decodeFromString<SesiData>(decodedSesiDataJson)
+    Log.d("EditSessionScreen", "sesiDataJson: $sesiDataJson")
+
+    // Decode JSON dengan error handling yang lebih baik
+    val sesiData = remember(sesiDataJson) {
+        try {
+            val decodedJson = URLDecoder.decode(sesiDataJson, StandardCharsets.UTF_8.toString())
+            Json.decodeFromString<SesiData>(decodedJson)
+        } catch (e: Exception) {
+            Log.e("EditSessionScreen", "Error decoding JSON: ${e.message}", e)
+            // Return default SesiData jika terjadi error
+            SesiData(
+                id_sesi = 0,
+                nama_materi = "",
+                pertemuan = "1",
+                waktu_masuk = "08:00",
+                divisi = "Software",
+                jenis_sesi = "Offline",
+                link_meet = null,
+                ruangan = null
+            )
+        }
     }
 
-    var selectedCategory by remember { mutableStateOf(sesiData.divisi) }
+    Log.d("EditSessionScreen", "sesiData: $sesiData")
+
+    var selectedCategory by remember { mutableStateOf(sesiData.divisi ?: "Software") }
     var subjectName by remember { mutableStateOf(sesiData.nama_materi ?: "") }
-    var meetingNumber by remember { mutableStateOf(sesiData.pertemuan.toString()) }
-    var meetingTime by remember { mutableStateOf(sesiData.waktu_masuk) }
+    var meetingNumber by remember { mutableStateOf(sesiData.pertemuan ?: "1") }
+    var meetingTime by remember { mutableStateOf(sesiData.waktu_masuk ?: "08:00") }
     var meetingLink by remember { mutableStateOf(sesiData.link_meet ?: "") }
     var meetingLocation by remember { mutableStateOf(sesiData.ruangan ?: "") }
-    var selectedMode by remember { mutableStateOf(sesiData.jenis_sesi) }
+    var selectedMode by remember { mutableStateOf(sesiData.jenis_sesi ?: "Offline") }
     var showDropdown by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
@@ -104,26 +119,16 @@ fun EditSessionScreen(
         isLoading = true
         scope.launch {
             try {
-                val updateData = mapOf(
-                    "nama_materi" to subjectName,
-                    "waktu_masuk" to meetingTime,
-                    "divisi" to selectedCategory,
-                    "jenis_sesi" to selectedMode,
-                    "pertemuan" to (meetingNumber.toIntOrNull() ?: 0),
-                    "link_meet" to if(selectedMode == "Online") meetingLink else null,
-                    "ruangan" to if (selectedMode == "Offline") meetingLocation else null
-                )
-
                 // Update to Supabase
-                val jsonMap = mutableMapOf<String, JsonElement>()
-                supabase.from("sesi")
+                val result = supabase.from("sesi")
                     .update(
                         buildJsonObject {
                             put("nama_materi", JsonPrimitive(subjectName))
                             put("waktu_masuk", JsonPrimitive(meetingTime))
                             put("divisi", JsonPrimitive(selectedCategory))
                             put("jenis_sesi", JsonPrimitive(selectedMode))
-                            put("pertemuan", JsonPrimitive(meetingNumber.toIntOrNull() ?: 0))
+                            // Pastikan pertemuan sebagai string jika database mengharapkan string
+                            put("pertemuan", JsonPrimitive(meetingNumber))
 
                             if (selectedMode == "Online") {
                                 put("link_meet", JsonPrimitive(meetingLink))
@@ -133,11 +138,13 @@ fun EditSessionScreen(
                                 put("link_meet", JsonNull)
                             }
                         }
-                    ){
+                    ) {
                         filter {
-                            eq("id_sesi", sesiData.id_sesi)
+                            eq("id_sesi", sesiData.id_sesi ?: 0)
                         }
                     }
+
+                Log.d("EditSessionScreen", "Update result: $result")
 
                 withContext(Dispatchers.Main) {
                     isLoading = false
@@ -148,7 +155,7 @@ fun EditSessionScreen(
                 withContext(Dispatchers.Main) {
                     isLoading = false
                     Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                    Log.d("EditSessionScreen", "Error: ${e.message}")
+                    Log.e("EditSessionScreen", "Error updating session: ${e.message}", e)
                 }
             }
         }
@@ -251,7 +258,12 @@ fun EditSessionScreen(
                         )
                         OutlinedTextField(
                             value = meetingNumber,
-                            onValueChange = { meetingNumber = it },
+                            onValueChange = {
+                                // Hanya menerima input angka
+                                if (it.isEmpty() || it.all { char -> char.isDigit() }) {
+                                    meetingNumber = it
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(15.dp),
                             colors = OutlinedTextFieldDefaults.colors(

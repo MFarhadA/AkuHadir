@@ -37,11 +37,11 @@ fun AddSessionScreen(
     onCreateSession: () -> Unit
 ) {
     var selectedCategory by remember { mutableStateOf("Hardware") }
-    var subjectName by remember { mutableStateOf("Pembelajaran UI/UX") }
-    var meetingNumber by remember { mutableStateOf("9") }
-    var meetingTime by remember { mutableStateOf("17:30") }
-    var meetingLink by remember { mutableStateOf("meet.google.com/etr-rtr-qrq") }
-    var meetingLocation by remember { mutableStateOf("Ruang Lab Komputer") }
+    var subjectName by remember { mutableStateOf("") }
+    var meetingNumber by remember { mutableStateOf("") }
+    var meetingTime by remember { mutableStateOf("") }
+    var meetingLink by remember { mutableStateOf("") }
+    var meetingLocation by remember { mutableStateOf("") }
     var selectedMode by remember { mutableStateOf("Offline") }
     var showDropdown by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
@@ -195,7 +195,10 @@ fun AddSessionScreen(
                             unfocusedBorderColor = Gray,
                             focusedTextColor = Black,
                             unfocusedTextColor = Black
-                        )
+                        ),
+                        placeholder = {
+                            Text(text = "Masukkan nama materi", color = Gray)
+                        }
                     )
                 }
 
@@ -225,7 +228,10 @@ fun AddSessionScreen(
                                 unfocusedBorderColor = Gray,
                                 focusedTextColor = Black,
                                 unfocusedTextColor = Black
-                            )
+                            ),
+                            placeholder = {
+                                Text(text = "10", color = Gray)
+                            }
                         )
                     }
 
@@ -269,6 +275,9 @@ fun AddSessionScreen(
                                     contentDescription = "Time",
                                     tint = Color.Gray
                                 )
+                            },
+                            placeholder = {
+                                Text(text = "10:00", color = Gray)
                             }
                         )
                     }

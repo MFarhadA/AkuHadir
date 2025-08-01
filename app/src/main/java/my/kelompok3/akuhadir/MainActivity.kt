@@ -108,12 +108,6 @@ fun AkuHadirApp() {
                 }
             )
         }
-        composable("attendance") {
-            AttendanceScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onSubmitAttendance = { navController.popBackStack() }
-            )
-        }
         composable(
             route = "sessionDetails/{id_sesi}/{title}/{meeting}",
             arguments = listOf(

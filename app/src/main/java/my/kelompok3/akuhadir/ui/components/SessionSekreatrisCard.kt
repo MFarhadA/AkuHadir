@@ -34,7 +34,7 @@ import my.kelompok3.akuhadir.data.model.SesiData
 fun SessionSekretarisCard(
     onNavigateToAddSession: () -> Unit,
     onEditSession: (SesiData) -> Unit = {},
-    onViewParticipants: (SesiData) -> Unit = {},
+    onNavigateToSessionDetails: (Int, String, String) -> Unit,
     refreshData: () -> Unit // Tambahkan parameter refresh
 ) {
     val supabase = SupabaseInstance.client
@@ -46,38 +46,43 @@ fun SessionSekretarisCard(
     var error by remember { mutableStateOf<String?>(null) }
     var showConfirmDialog by remember { mutableStateOf<SesiData?>(null) }
 
+    // State untuk refresh
+    val refreshTrigger = remember { mutableStateOf(0) }
+
     // Fetch sesi data - tambahkan refreshTrigger sebagai key
-    LaunchedEffect(Unit) {
-        isLoading = true
-        error = null
+    LaunchedEffect(Unit, refreshTrigger) {
+        coroutineScope.launch {
+            isLoading = true
+            error = null
 
-        try {
-            val result = try {
-                supabase.from("sesi")
-                    .select {
-                        filter {
-                            eq("Keterangan", "berjalan")
+            try {
+                val result = try {
+                    supabase.from("sesi")
+                        .select {
+                            filter {
+                                eq("Keterangan", "berjalan")
+                            }
                         }
-                    }
-                    .decodeList<SesiData>()
+                        .decodeList<SesiData>()
+                } catch (e: Exception) {
+                    Log.w("SessionSekretarisCard", "Error filtering by keterangan: ${e.message}")
+                    supabase.from("sesi")
+                        .select {}
+                        .decodeList<SesiData>()
+                        .filter { sesi ->
+                            sesi.keterangan?.lowercase() != "selesai"
+                        }
+                }
+
+                sesiList = result.sortedByDescending { it.waktu_masuk }
+                Log.d("SessionSekretarisCard", "Loaded ${sesiList.size} active sessions")
+
             } catch (e: Exception) {
-                Log.w("SessionSekretarisCard", "Error filtering by keterangan: ${e.message}")
-                supabase.from("sesi")
-                    .select {}
-                    .decodeList<SesiData>()
-                    .filter { sesi ->
-                        sesi.keterangan?.lowercase() != "selesai"
-                    }
+                error = "Error loading sessions: ${e.message}"
+                Log.e("SessionSekretarisCard", "Error loading sessions", e)
+            } finally {
+                isLoading = false
             }
-
-            sesiList = result.sortedByDescending { it.waktu_masuk }
-            Log.d("SessionSekretarisCard", "Loaded ${sesiList.size} active sessions")
-
-        } catch (e: Exception) {
-            error = "Error loading sessions: ${e.message}"
-            Log.e("SessionSekretarisCard", "Error loading sessions", e)
-        } finally {
-            isLoading = false
         }
     }
 
@@ -222,7 +227,11 @@ fun SessionSekretarisCard(
                         },
                         onEditSession = { onEditSession(sesi) }, // Pass sesi data
                         onCloseSession = { showConfirmDialog = sesi },
-                        onViewParticipants = { onViewParticipants(sesi) },
+                        onViewParticipants = { onNavigateToSessionDetails(
+                            sesi.id_sesi ?: 0,
+                            sesi.nama_materi ?: "Sesi tanpa nama",
+                            sesi.pertemuan ?: "-"
+                        ) },
                         modifier = Modifier.padding(vertical = 2.dp)
                     )
                 }
